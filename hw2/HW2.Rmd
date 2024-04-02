@@ -57,6 +57,7 @@ plot(gt20dwn ~ factor(FRSTHO), data=homes,
 ### Question 1
 
 #### Regress log price onto all variables but mortgage.
+
 ```{r}
 # First convert all non-numeric columns in 'homes' to factors
 homes = lapply(homes, function(x) if(!is.numeric(x)) factor(x) else x)
@@ -69,15 +70,18 @@ pricey <- glm(log(LPRICE) ~ .-AMMORT, data=homes)
 ```
 
 #### What is the R2?
+
 ```{r}
 # Extract R-squared value the summary
 summary_pricey <- summary(pricey)
 R2_reduced = 1 - summary_pricey$deviance / summary_pricey$null.deviance
 R2_reduced
 ```
+
 So the R2 score is 0.4565419.
 
 #### How many coefficients are used in this model and how many are significant at 10% FDR?
+
 ```{r}
 # extract pvalues
 pvals <- summary(pricey)$coef[-1,4]
@@ -87,6 +91,7 @@ length(pvals)
 So there are 42 coefficients in this model.
 
 #### Re-run regression with only the significant covariates, and compare R2 to the full model. (2 points)
+
 ```{r}
 # Find the p-value cutoff at the 10% FDR level
 
@@ -143,30 +148,64 @@ Which is slightly less than the R2 score of the full model (which was 0.4565419)
 
 ### Question 2
 
-Fit a regression for whether the buyer had more than 20 percent down (onto everything but AMMORT and LPRICE).  
-Interpret effects for Pennsylvania state, 1st home buyers and the number of bathrooms.  
-Add and describe an interaction between 1st home-buyers and the number of baths. (2 points).  
+#### Fit a regression for whether the buyer had more than 20 percent down (onto everything but AMMORT and LPRICE).
 
+```{r}
+# Fit the logistic regression model excluding AMMORT and LPRICE
+down_payment_model = glm(gt20dwn ~ . -AMMORT -LPRICE, family="binomial", data=homes)
+```
+
+#### Interpret effects for Pennsylvania state, 1st home buyers and the number of bathrooms.
+
+```{r}
+# Summary of the model to interpret coefficients
+summary_down_payment_model = summary(down_payment_model)
+summary_down_payment_model
+```
+
+```{r}
+# Extract the relevant coefficients
+coef(summary_down_payment_model)[c("(Intercept)", "STATEPA", "BATHS", "FRSTHOY"), ]
+```
+
+The coefficient of $\approx$ 0.601 for STATEPA suggests that being in the state of Pennsylvania increases the log-odds of having more than a 20% down payment by approximately 0.601 compared to the baseline.
+
+The coefficient of $\approx$ 0.245 for BATHS means that each additional bathroom increases the log-odds of having a \> 20% down payment by approximately 0.245. By exponentiating the coefficient, $exp(0.245) \approx 1.277$, we can interpret this as meaning that each additional bathroom will need to a 27.7% increase in the odds of having a more than 20% down payment.
+
+Finally the coefficient of $\approx$ -0.370 for FRSTHOY suggests that first home buyers have a lower log odds of having a \> 20% down payment than non-first home buyers by about 0.370.
+
+Further, in the summary above, we notice that there are 3 stars (\*\*\*) for each of the three coefficients above, which suggests that the p values for these covariates are likely to be statistically significant.
+
+#### Add and describe an interaction between 1st home-buyers and the number of baths.
 
 ```{r}
 # - don't forget family="binomial"!
 # - use +A*B in formula to add A interacting with B
-# Fit the logistic regression model excluding AMMORT and LPRICE
-down_payment_model <- glm(gt20dwn ~ . -AMMORT -LPRICE + FRSTHO*BATHS, family="binomial", data=homes)
+
+# Fit the logistic regression model excluding AMMORT and LPRICE, and include an interaction term
+interaction_model <- glm(gt20dwn ~ . -AMMORT -LPRICE + FRSTHO*BATHS, family="binomial", data=homes)
 
 # Summary of the model to interpret coefficients
-summary_down_payment_model <- summary(down_payment_model)
+summary_interaction_model <- summary(interaction_model)
 
 # Print the summary to interpret effects
-summary_down_payment_model
+summary_interaction_model
 ```
-The negative coefficient for the interaction term (BATHS:FRSTHOY) suggests that for first-time home-buyers, each additional bathroom decreases the log odds of putting down more than 20% by 0.202 compared to buyers who are not purchasing their first home. This could indicate that first-time home buyers are either purchasing less expensive homes with more bathrooms or that the presence of additional bathrooms diminishes their ability or inclination to make larger down payments, perhaps due to the overall higher costs associated with homes that have more bathrooms.
+
+```{r}
+# Extract the relevant coefficients
+coef(summary_interaction_model)[c("(Intercept)", "STATEPA", "BATHS", "FRSTHOY", "BATHS:FRSTHOY"), ]
+```
+
+The negative coefficient for the interaction term (BATHS:FRSTHOY) suggests that for first-time home-buyers, each additional bathroom decreases the log odds of putting down more than 20% by 0.202 compared to buyers who are not purchasing their first home.\
+This could indicate that first-time home buyers are either purchasing less expensive homes with more bathrooms or that the presence of additional bathrooms diminishes their ability or inclination to make larger down payments, perhaps due to the overall higher costs associated with homes that have more bathrooms.
 
 \newpage
 
 ### Question 3
 
 #### Focus only on a subset of homes worth $>100k$.
+
 ```{r}
 # this is your training sample
 subset_index = which(homes$VALUE>100000)
@@ -174,17 +213,20 @@ subset_homes = homes[subset_index,]
 ```
 
 #### Train the full model from Question 1 on this subset.
+
 ```{r}
 # Train the full model on this subset
 full_model_subset = glm(log(LPRICE) ~ . - AMMORT, data=subset_homes)
 ```
 
 #### Predict the left-out homes using this model.
+
 ```{r}
 predicted_log_prices = predict(full_model_subset, newdata=homes[-subset_index,])
 ```
 
 #### What is the out-of-sample fit (i.e. R2)?
+
 ```{r}
 # Use the code ``deviance.R" to compute OOS deviance
 source("deviance.R")
@@ -208,5 +250,5 @@ So the out-of-sample fit is -0.04904513.
 
 #### Explain why you get this value.  
 
-A negative R2 model on the out-of-sample data suggests that the model may be overfitting to the data with homes worth \>100k.\
-Thus using the same model for the left-out homes may be unreliable as the model may not necessarily generalize well, as the left-out homes might have different characteristics and patterns compared to the training data.
+
+Based on the output, we can see the value of r-squared is negative for the out-of-sample data. When the $R^2$ is negative, it typically indicates that the model's performance is worse than simply using the mean value as the prediction. In this case, it's likely that the model has over-fitted to the initial data, possibly due to the presence of outliers or due to the initial subset having different characteristics compared to the left out data. Additionally, if the model was trained only on homes worth \>100k, it may not generalize well to homes worth \<100k, leading to poor performance when applied to this subset of data.
