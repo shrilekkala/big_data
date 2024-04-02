@@ -6,7 +6,7 @@ output:
 
 # BUS 41201 Homework 2 Assignment
 
-## Shihan Ban, Yi Cao, Shri Lekkala, Ningxin Zhang
+## Group 24: Shihan Ban, Yi Cao, Shri Lekkala, Ningxin Zhang
 
 ## 2 April 2024
 
@@ -248,7 +248,6 @@ OOS_fit
 
 So the out-of-sample fit is -0.04904513.
 
-#### Explain why you get this value.  
-
+#### Explain why you get this value.
 
 Based on the output, we can see the value of r-squared is negative for the out-of-sample data. When the $R^2$ is negative, it typically indicates that the model's performance is worse than simply using the mean value as the prediction. In this case, it's likely that the model has over-fitted to the initial data, possibly due to the presence of outliers or due to the initial subset having different characteristics compared to the left out data. Additionally, if the model was trained only on homes worth \>100k, it may not generalize well to homes worth \<100k, leading to poor performance when applied to this subset of data.
