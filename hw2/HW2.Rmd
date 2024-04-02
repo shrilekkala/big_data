@@ -131,6 +131,15 @@ Add and describe an interaction between 1st home-buyers and the number of baths.
 ```{r}
 # - don't forget family="binomial"!
 # - use +A*B in formula to add A interacting with B
+# Fit the logistic regression model excluding AMMORT and LPRICE
+down_payment_model <- glm(gt20dwn ~ . -AMMORT -LPRICE + FRSTHO*BATHS, family="binomial", data=homes)
+
+# Summary of the model to interpret coefficients
+summary_down_payment_model <- summary(down_payment_model)
+
+# Print the summary to interpret effects
+summary_down_payment_model
+
 ```
 
 ### Question 3
