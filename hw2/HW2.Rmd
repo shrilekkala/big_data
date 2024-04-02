@@ -56,30 +56,28 @@ plot(gt20dwn ~ factor(FRSTHO), data=homes,
 
 ### Question 1
 
-Regress log price onto all variables but mortgage.\
-What is the R2? How many coefficients are used in this model and how many are significant at 10% FDR?\
-Re-run regression with only the significant covariates, and compare R2 to the full model. (2 points)
-
+#### Regress log price onto all variables but mortgage.
 ```{r}
 # First convert all non-numeric columns in 'homes' to factors
 homes = lapply(homes, function(x) if(!is.numeric(x)) factor(x) else x)
 
 # Convert 'homes' back to a data frame, as lapply returns a list
 homes = as.data.frame(homes)
-```
 
-```{r}
 # regress log(PRICE) on everything except AMMORT 
 pricey <- glm(log(LPRICE) ~ .-AMMORT, data=homes)
+```
 
+#### What is the R2?
+```{r}
 # Extract R-squared value the summary
 summary_pricey <- summary(pricey)
 R2_reduced = 1 - summary_pricey$deviance / summary_pricey$null.deviance
 R2_reduced
 ```
-
 So the R2 score is 0.4565419.
 
+#### How many coefficients are used in this model and how many are significant at 10% FDR?
 ```{r}
 # extract pvalues
 pvals <- summary(pricey)$coef[-1,4]
@@ -88,6 +86,7 @@ length(pvals)
 
 So there are 42 coefficients in this model.
 
+#### Re-run regression with only the significant covariates, and compare R2 to the full model. (2 points)
 ```{r}
 # Find the p-value cutoff at the 10% FDR level
 
@@ -144,11 +143,10 @@ Which is slightly less than the R2 score of the full model (which was 0.4565419)
 
 ### Question 2
 
-Fit a regression for whether the buyer had more than 20 percent down (onto everything but AMMORT and LPRICE).
+Fit a regression for whether the buyer had more than 20 percent down (onto everything but AMMORT and LPRICE).  
+Interpret effects for Pennsylvania state, 1st home buyers and the number of bathrooms.  
+Add and describe an interaction between 1st home-buyers and the number of baths. (2 points).  
 
-Interpret effects for Pennsylvania state, 1st home buyers and the number of bathrooms.
-
-Add and describe an interaction between 1st home-buyers and the number of baths. (2 points)
 
 ```{r}
 # - don't forget family="binomial"!
@@ -162,57 +160,53 @@ summary_down_payment_model <- summary(down_payment_model)
 # Print the summary to interpret effects
 summary_down_payment_model
 ```
-
-The negative coefficient for the interaction term (BATHS:FRSTHOY) suggests that for first-time homebuyers, each additional bathroom decreases the log odds of putting down more than 20% by 0.202 compared to buyers who are not purchasing their first home. This could indicate that first-time home buyers are either purchasing less expensive homes with more bathrooms or that the presence of additional bathrooms diminishes their ability or inclination to make larger down payments, perhaps due to the overall higher costs associated with homes that have more bathrooms.
+The negative coefficient for the interaction term (BATHS:FRSTHOY) suggests that for first-time home-buyers, each additional bathroom decreases the log odds of putting down more than 20% by 0.202 compared to buyers who are not purchasing their first home. This could indicate that first-time home buyers are either purchasing less expensive homes with more bathrooms or that the presence of additional bathrooms diminishes their ability or inclination to make larger down payments, perhaps due to the overall higher costs associated with homes that have more bathrooms.
 
 \newpage
 
 ### Question 3
 
-Focus only on a subset of homes worth $>100k$.
-
+#### Focus only on a subset of homes worth $>100k$.
 ```{r}
 # this is your training sample
 subset_index = which(homes$VALUE>100000)
 subset_homes = homes[subset_index,]
 ```
 
-Train the full model from Question 1 on this subset.
-
+#### Train the full model from Question 1 on this subset.
 ```{r}
 # Train the full model on this subset
 full_model_subset = glm(log(LPRICE) ~ . - AMMORT, data=subset_homes)
 ```
 
-Predict the left-out homes using this model.
-
+#### Predict the left-out homes using this model.
 ```{r}
 predicted_log_prices = predict(full_model_subset, newdata=homes[-subset_index,])
 ```
 
-What is the out-of-sample fit (i.e. R2)?
+#### What is the out-of-sample fit (i.e. R2)?
+```{r}
+# Use the code ``deviance.R" to compute OOS deviance
+source("deviance.R")
+
+# Null model has just one mean parameter
+ybar = mean(log(homes$LPRICE[-subset_index]))
+ybar
+D0 = deviance(y=log(homes$LPRICE[-subset_index]), pred=ybar)
+D0
+```
 
 ```{r}
 # find the actual out of sample log prices
 actual_log_prices = log(homes[-subset_index,]$LPRICE)
 
-# Use the code ``deviance.R" to compute OOS deviance
-source("deviance.R")
 OOS_fit = R2(actual_log_prices, predicted_log_prices)
 OOS_fit
 ```
 
 So the out-of-sample fit is -0.04904513.
 
-```{r}
-# Null model has just one mean parameter
-ybar <- mean(log(homes$LPRICE[-subset_index]))
-ybar
-D0 <- deviance(y=log(homes$LPRICE[-subset_index]), pred=ybar)
-D0
-```
-
-Explain why you get this value.
+#### Explain why you get this value.  
 
 A negative R2 model on the out-of-sample data suggests that the model may be overfitting to the data with homes worth \>100k.\
 Thus using the same model for the left-out homes may be unreliable as the model may not necessarily generalize well, as the left-out homes might have different characteristics and patterns compared to the training data.
