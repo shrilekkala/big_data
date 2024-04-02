@@ -14,6 +14,8 @@ output:
 
 ```{r}
 library(knitr) # library for markdown output
+# Set so that long lines in R will be wrapped:
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), tidy=TRUE)
 
 ##### ******** Mortgage and Home Sales Data ******** #####
 
@@ -57,13 +59,21 @@ What is the R2? How many coefficients are used in this model and how many are si
 Re-run regression with only the significant covariates, and compare R2 to the full model. (2 points)
 
 ```{r}
+# First convert all non-numeric columns in 'homes' to factors
+homes = lapply(homes, function(x) if(!is.numeric(x)) factor(x) else x)
+
+# Convert 'homes' back to a data frame, as lapply returns a list
+homes = as.data.frame(homes)
+```
+
+```{r}
 # regress log(PRICE) on everything except AMMORT 
 pricey <- glm(log(LPRICE) ~ .-AMMORT, data=homes)
 
 # Extract R-squared value the summary
 summary_pricey <- summary(pricey)
-R2 = 1 - summary_pricey$deviance / summary_pricey$null.deviance
-R2
+R2_reduced = 1 - summary_pricey$deviance / summary_pricey$null.deviance
+R2_reduced
 ```
 
 So the R2 score is 0.4565419.
@@ -73,6 +83,7 @@ So the R2 score is 0.4565419.
 pvals <- summary(pricey)$coef[-1,4]
 length(pvals)
 ```
+
 So there are 42 coefficients in this model.
 
 ```{r}
@@ -101,24 +112,31 @@ So out of the 42 coefficients, 36 are significant at the 10% FDR level.
 
 ```{r}
 # Extract significant coefficients
-significant_vars = names(pvals)[pvals < p_cutoff]
-
-# Manually construct the formula string
-response_var = "log(LPRICE)"
-covariates = paste(significant_vars, collapse = " + ")
-reduced_formula_str = paste(response_var, "~", covariates)
-
-# # Rerun the regression with the significant covariates
-# reduced_model = glm(reduced_formula_str, data=homes)
-# 
-# # Extract R-squared value the summary
-# summary_reduced_model = summary(reduced_model)
-# R2_reduced = 1 - summary_reduced_model$deviance / summary_reduced_model$null.deviance
-# R2_reduced
+significant_covariates = names(pvals)[pvals < p_cutoff]
+significant_covariates
 ```
+
+As there are covariates that correspond to factors, we extract only the relevant variable names and use them for our reduced model.
 
 ```{r}
+# Get the names of significant variables in the dataset
+significant_vars = c("EAPTBL", "ECOM2", "EGREEN", "EJUNK", "ELOW1", "ESFD", "EABAN", "HOWH", "HOWN", "ODORA", "STRNA", "ZINC2", "PER", "ZADULT", "HHGRAD", "INTW", "METRO", "STATE", "BATHS", "MATBUY", "DWNPAY", "VALUE", "FRSTHO", "gt20dwn")
+
+# Construct the formula for the reduced model
+reduced_formula_str = paste("log(LPRICE)", "~", paste(significant_vars, collapse = " + "))
+
+# Rerun the regression with the significant covariates
+reduced_model = glm(reduced_formula_str, data=homes)
+
+# Extract R-squared value the summary
+summary_reduced_model = summary(reduced_model)
+R2_reduced = 1 - summary_reduced_model$deviance / summary_reduced_model$null.deviance
+R2_reduced
 ```
+
+So the R2 score for the reduced model is 0.4563139.
+
+Which is slightly less than the R2 score of the full model (which was 0.4565419), this is expected as our reduced model has fewer covariates than the full model.
 
 ### Question 2
 
@@ -140,7 +158,9 @@ summary_down_payment_model <- summary(down_payment_model)
 # Print the summary to interpret effects
 summary_down_payment_model
 ```
+
 The negative coefficient for the interaction term (BATHS:FRSTHOY) suggests that for first-time homebuyers, each additional bathroom decreases the log odds of putting down more than 20% by 0.202 compared to buyers who are not purchasing their first home. This could indicate that first-time home buyers are either purchasing less expensive homes with more bathrooms or that the presence of additional bathrooms diminishes their ability or inclination to make larger down payments, perhaps due to the overall higher costs associated with homes that have more bathrooms.
+
 ### Question 3
 
 Focus only on a subset of homes worth $>100k$.\
@@ -161,8 +181,6 @@ ybar <- mean(log(homes$LPRICE[-subset]))
 D0 <- deviance(y=log(homes$LPRICE[-subset]), pred=ybar)
 
 ```
-
-So the p-value cutoff for 1% FDR is: 0.002413249
 
 ```{r}
 ```
