@@ -58,29 +58,80 @@ Re-run regression with only the significant covariates, and compare R2 to the fu
 
 ```{r}
 # regress log(PRICE) on everything except AMMORT 
-
 pricey <- glm(log(LPRICE) ~ .-AMMORT, data=homes)
 
+# Extract R-squared value the summary
+summary_pricey <- summary(pricey)
+R2 = 1 - summary_pricey$deviance / summary_pricey$null.deviance
+R2
+```
+
+So the R2 score is 0.4565419.
+
+```{r}
 # extract pvalues
-
 pvals <- summary(pricey)$coef[-1,4]
+length(pvals)
+```
+So there are 42 coefficients in this model.
 
-# example: those variable insignificant at alpha=0.05
+```{r}
+# Find the p-value cutoff at the 10% FDR level
 
-names(pvals)[pvals>.05]
+# To find the p-value cut off we first order the p values
+pvals_ordered <- pvals[order(pvals, decreasing=F)]
 
-# you'll want to replace .05 with your FDR cutoff
-# you can use the `-AMMORT' type syntax to drop variables
+# Next we use the function fdr_cut function defined in class class to find the cutoff at level 0.1
+fdr_cut <- function(pvals, q){
+  pvals <- pvals[!is.na(pvals)]
+  N <- length(pvals)
+  k <- rank(pvals, ties.method="min")
+  alpha <- max(pvals[ pvals<= (q*k/N) ])
+  return(alpha)
+}
+
+p_cutoff = fdr_cut(pvals_ordered, q=0.1)
+p_cutoff
+
+# Find the number of significant coefficients at this level
+sum(pvals < p_cutoff)
+```
+
+So out of the 42 coefficients, 36 are significant at the 10% FDR level.
+
+```{r}
+# Extract significant coefficients
+significant_vars = names(pvals)[pvals < p_cutoff]
+
+# Manually construct the formula string
+response_var = "log(LPRICE)"
+covariates = paste(significant_vars, collapse = " + ")
+reduced_formula_str = paste(response_var, "~", covariates)
+
+# # Rerun the regression with the significant covariates
+# reduced_model = glm(reduced_formula_str, data=homes)
+# 
+# # Extract R-squared value the summary
+# summary_reduced_model = summary(reduced_model)
+# R2_reduced = 1 - summary_reduced_model$deviance / summary_reduced_model$null.deviance
+# R2_reduced
+```
+
+```{r}
 ```
 
 ### Question 2
+
+Fit a regression for whether the buyer had more than 20 percent down (onto everything but AMMORT and LPRICE).
+
+Interpret effects for Pennsylvania state, 1st home buyers and the number of bathrooms.
+
+Add and describe an interaction between 1st home-buyers and the number of baths. (2 points)
 
 ```{r}
 # - don't forget family="binomial"!
 # - use +A*B in formula to add A interacting with B
 ```
-
-So there are 461 tests significant at the alpha level 0.05 and 348 tests significant at the alpha level 0.01.
 
 ### Question 3
 
