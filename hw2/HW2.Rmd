@@ -139,9 +139,8 @@ summary_down_payment_model <- summary(down_payment_model)
 
 # Print the summary to interpret effects
 summary_down_payment_model
-
 ```
-
+The negative coefficient for the interaction term (BATHS:FRSTHOY) suggests that for first-time homebuyers, each additional bathroom decreases the log odds of putting down more than 20% by 0.202 compared to buyers who are not purchasing their first home. This could indicate that first-time home buyers are either purchasing less expensive homes with more bathrooms or that the presence of additional bathrooms diminishes their ability or inclination to make larger down payments, perhaps due to the overall higher costs associated with homes that have more bathrooms.
 ### Question 3
 
 Focus only on a subset of homes worth $>100k$.\
