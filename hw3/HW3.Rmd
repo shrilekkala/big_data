@@ -16,13 +16,11 @@ output:
 knitr::opts_chunk$set(echo = TRUE, 
                       #include = TRUE, 
                       fig.width = 6, fig.height = 4,
-                      results='hide',
                       warning = FALSE,
                       cache = TRUE,
                       digits = 3,
                       width = 48) 
 ```
-
 
 # Amazon Reviews
 
@@ -106,7 +104,7 @@ Y=1& \quad\text{for  5 stars}\\
 Y=0& \quad \text{for less than 5 stars}.
 \end{align}
 
-### Fit a LASSO model with only product categories. The start code prepares a sparse design matrix of 142 product categories. 
+### Fit a LASSO model with only product categories. The start code prepares a sparse design matrix of 142 product categories.
 
 ```{r data, results='asis'}
 
@@ -158,8 +156,8 @@ summary_output <- summary(lasso1)
 plot(lasso1)
 ```
 
+### What is the in-sample R2 for the AICc slice of the LASSO path?
 
-### What is the in-sample R2 for the AICc slice of the LASSO path? 
 ```{R}
 # Find the lowest AICc
 best_aicc_index <- which.min(summary_output$aicc)
@@ -172,16 +170,15 @@ print(best_r2)
 
 The in-sample R2 for the AICc slice of the LASSO path is 0.1048737.
 
-### Why did we use standardize FALSE? (1 point)
+### Why did we use standardize FALSE?
 
 We did not standardize as the predictors in the model are binary indicators representing product categories. Since each product category is either present (1) or absent (0), their scale is already normalized in a sense that they are on the same scale. Standardizing would not add value and could potentially mislead the model fitting process by artificially inflating the variance of these binary predictors.
 
 \newpage
 
-
 ## Question 2
 
-### Fit a LASSO model with both product categories and the review content (i.e. the frequency of occurrence of words). 
+### Fit a LASSO model with both product categories and the review content (i.e. the frequency of occurrence of words).
 
 ```{r xtable, results='asis'}
 
@@ -206,8 +203,7 @@ summary_output_2 <- summary(lasso2)
 plot(lasso2)
 ```
 
-
-### Use AICc to select lambda. 
+### Use AICc to select lambda.
 
 ```{R}
 # Find the index of the best AICc
@@ -217,6 +213,7 @@ best_aicc_index_2 <- which.min(summary_output_2$aicc)
 optimal_lambda <- lasso2$lambda[best_aicc_index_2]
 optimal_lambda
 ```
+
 So the optimal lambda is 0.0002401874, selected via AICc.
 
 ### How many words were selected as predictive of a 5 star review?
@@ -235,9 +232,10 @@ num_predictive_words <- sum(word_coefficients != 0)
 # Output the number of words
 num_predictive_words
 ```
+
 So there are 1022 words out of the 1125 possible ones that were selected as predictive of a 5 star review
 
-### Which 10 words have the most positive effect on odds of a 5 star review? 
+### Which 10 words have the most positive effect on odds of a 5 star review?
 
 ```{r}
 # Sort the coefficients to find the largest positive values
@@ -250,25 +248,24 @@ top_10_positive_words <-head(sorted_word_coefs, 10)
 top_10_positive_words
 ```
 
-So the 10 words that have the most positive effect on odds of a 5 star review are:  
+So the 10 words that have the most positive effect on odds of a 5 star review are:\
 "worried, plus, excellently, find, grains, hound, sliced, discount, youd, doggies"
 
-### What is the interpretation of the coefficient for the word \`discount'? (3 points)
+### What is the interpretation of the coefficient for the word \`discount'?
 
-The coefficient value of 6.96 is relatively large compared to other coefficients in the model.    
-This indicates a strong correlation between mentioning the word "discount" in reviews and the likelihood of receiving a 5-star rating. A positive coefficient signifies a positive correlation, suggesting that as the frequency of the word "discount" increases in reviews, the probability of receiving a 5-star rating also increases.  
-Practically, this coefficient implies that reviews mentioning "discount" are more likely to receive a 5-star rating compared to those that do not mention "discount," assuming all other factors remain constant. This could reflect customer satisfaction with discounted products or a tendency to give positive reviews when discounts are involved.  
+The coefficient value of 6.96 is relatively large compared to other coefficients in the model.\
+This indicates a strong correlation between mentioning the word "discount" in reviews and the likelihood of receiving a 5-star rating. A positive coefficient signifies a positive correlation, suggesting that as the frequency of the word "discount" increases in reviews, the probability of receiving a 5-star rating also increases.\
+Practically, this coefficient implies that reviews mentioning "discount" are more likely to receive a 5-star rating compared to those that do not mention "discount," assuming all other factors remain constant. This could reflect customer satisfaction with discounted products or a tendency to give positive reviews when discounts are involved.\
 While many factors influence the likelihood of receiving a 5-star rating, mentioning discounts emerges as a significant contributing factor.
 
 \newpage
 
-
 ## Question 3
 
-### Continue with the model from Question 2. Run cross-validation to obtain the best lambda value that minimizes OOS deviance. 
-
+### Continue with the model from Question 2. Run cross-validation to obtain the best lambda value that minimizes OOS deviance.
 
 ```{r xtable data, results='asis'}
+set.seed(1)
 cv.fit <- cv.gamlr(x_cat2,
 				   y=Y,
 				   lambda.min.ratio=1e-3,
@@ -283,6 +280,7 @@ best_lambda_cv <- cv.fit$lambda.min
 # Output the best lambda
 best_lambda_cv
 ```
+
 So the best lambda that minimizes OOS deviance is 0.001473767, obtained via cross-validation
 
 ### How many coefficients are nonzero then?
@@ -300,7 +298,7 @@ nonzero_coefficients
 
 So there are 974 nonzero coefficients.
 
-### How many are nonzero under the 1se rule? (1 point)
+### How many are nonzero under the 1se rule?
 
 ```{r}
 # Find the best lambda via the 1se rule
@@ -320,5 +318,5 @@ nonzero_coefficient_1se <- sum(coefficients_1se != 0)
 # Output the number of non-zero coefficients
 nonzero_coefficient_1se
 ```
-So there are 831 nonzero coefficients under the 1se rule.
 
+So there are 831 nonzero coefficients under the 1se rule.
