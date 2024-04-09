@@ -265,7 +265,6 @@ While many factors influence the likelihood of receiving a 5-star rating, mentio
 ### Continue with the model from Question 2. Run cross-validation to obtain the best lambda value that minimizes OOS deviance.
 
 ```{r xtable data, results='asis'}
-set.seed(1)
 cv.fit <- cv.gamlr(x_cat2,
 				   y=Y,
 				   lambda.min.ratio=1e-3,
@@ -281,7 +280,7 @@ best_lambda_cv <- cv.fit$lambda.min
 best_lambda_cv
 ```
 
-So the best lambda that minimizes OOS deviance is 0.001473767, obtained via cross-validation
+So the best lambda that minimizes OOS deviance is 0.00137444, obtained via cross-validation
 
 ### How many coefficients are nonzero then?
 
