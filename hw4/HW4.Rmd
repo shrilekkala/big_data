@@ -108,19 +108,31 @@ From the graph, it might be appropriate to perform a logarithmic transformation 
 
 ```{r}
 # Transform degree and add it to the hh dataset
-hh$log_degree = log1p(degree)
+hh$d = log1p(degree)
 head(hh)
 ```
 
 ## Question 2
 
 ### Build a model to predict d from x, our controls.
-
 ### Comment on how tight the fit is, and what that implies for estimation of a treatment effect.
+```{r}
+model_d <- lm(d ~ village + religion + roof + rooms + beds + electricity + ownership + leader, data = hh)
+# Display model summary
+summary(model_d)
+plot(model_d)
+```
+In this model, some variables, like rooms, electricity, beds, and leader, are statistically significant, implying they have a notable impact on the response variable.
+
+The model we've run seems reasonably well-specified based on the first plot but does show potential outliers.The presence of influential points, as suggested by the fourth plot, means that the estimated treatment effect may be driven by a small number of cases. Thus, while there are indicators of a decent model fit, the presence of outliers and influential points suggests that the treatment effect estimation may be sensitive to particular data points. When interpreting treatment effects, it's crucial to consider these factors, as they can affect the validity and generalizability of the findings.
 
 ## Question 3
 
 ### Use predictions from [2] in an estimator for effect of d on loan.
+```{r}
+hh$predicted_d <- predict(model_d, type = "response")
+
+```
 
 ## Question 4
 
