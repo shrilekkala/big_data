@@ -22,7 +22,6 @@ knitr::opts_chunk$set(echo = TRUE,
                       width = 48) 
 ```
 
-
 ```{r}
 ## microfinance network 
 ## data from BANERJEE, CHANDRASEKHAR, DUFLO, JACKSON 2012
@@ -87,31 +86,51 @@ degree[is.na(degree)] <- 0 # unconnected houses, not in our graph
 # 2: glm.fit: fitted probabilities numerically 0 or 1 occurred 
 ```
 
-
 \newpage
 
 ## Question 1
 
-###  I’d transform degree to create our treatment variable d. What would you do and why?
+### I’d transform degree to create our treatment variable d. What would you do and why?
+
+We can first plot a histogram of the degree variable to get an idea of it's structure:
+
+```{r}
+hist(degree)
+```
+
+From the graph, it might be appropriate to perform a logarithmic transformation for the following reasons:
+
+-   It appears that the degree frequency is highly skewed to the right as there are many nodes with few connections (degree \< 20), but few nodes with many connections (degree \> 40). So by taking a log transformation, we can normalize the distribution, making it more symmetric and more suitable to statistical analyses.
+
+-   The histogram appears to follow an exponential / multiplicative relationship. So transforming the data logarithmically can make the relationship more linear, which is easier to model and interpret in regression models.
+
+-   We can reduce the range of variability in degree values, effectively performing a dimensionality reduction. This is useful to prevent the model being overly effected by outliers, i.e. households with a very high number of connections.
+
+```{r}
+# Transform degree and add it to the hh dataset
+hh$log_degree = log1p(degree)
+head(hh)
+```
 
 ## Question 2
 
-###  Build a model to predict d from x, our controls.
-###  Comment on how tight the fit is, and what that implies for estimation of a treatment effect.
+### Build a model to predict d from x, our controls.
+
+### Comment on how tight the fit is, and what that implies for estimation of a treatment effect.
 
 ## Question 3
 
-###  Use predictions from [2] in an estimator for effect of d on loan.
+### Use predictions from [2] in an estimator for effect of d on loan.
 
 ## Question 4
 
-###  Compare the results from [3] to those from a straight (naive) lasso for loan on d and x. 
+### Compare the results from [3] to those from a straight (naive) lasso for loan on d and x.
 
-###  Explain why they are similar or different.
+### Explain why they are similar or different.
 
 ## Question 5
 
-###  Bootstrap your estimator from [3] and describe the uncertainty.
+### Bootstrap your estimator from [3] and describe the uncertainty.
 
 ## [+]
 
