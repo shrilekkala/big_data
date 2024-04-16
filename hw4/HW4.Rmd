@@ -112,37 +112,123 @@ hh$d = log1p(degree)
 head(hh)
 ```
 
+\newpage
+
 ## Question 2
 
 ### Build a model to predict d from x, our controls.
+
 ### Comment on how tight the fit is, and what that implies for estimation of a treatment effect.
+
 ```{r}
 model_d <- lm(d ~ village + religion + roof + rooms + beds + electricity + ownership + leader, data = hh)
 # Display model summary
 summary(model_d)
 plot(model_d)
 ```
+
 In this model, some variables, like rooms, electricity, beds, and leader, are statistically significant, implying they have a notable impact on the response variable.
 
 The model we've run seems reasonably well-specified based on the first plot but does show potential outliers.The presence of influential points, as suggested by the fourth plot, means that the estimated treatment effect may be driven by a small number of cases. Thus, while there are indicators of a decent model fit, the presence of outliers and influential points suggests that the treatment effect estimation may be sensitive to particular data points. When interpreting treatment effects, it's crucial to consider these factors, as they can affect the validity and generalizability of the findings.
 
+------------------------------------------------------------------------
+
+\newpage
+
+```{r}
+# control variables
+x = model.matrix(d ~ village + religion + roof + rooms + beds + electricity + ownership + leader - 1, data = hh)  # -1 to omit intercept
+
+# dependent variable
+y = hh$loan
+
+# treatment variable
+d = hh$d
+
+# Estimate d_hat with lasso regression of d on x.
+treat = gamlr(x, d, lambda.min.ratio=1e-4)
+
+# Isolate dhat (the part of treatment that we can predict with x's)
+d_hat = predict(treat, x, type="response")
+
+# Plot d_hat against d
+plot(d_hat, d)
+```
+
+To assess the model fit, we can compute the in sample R2
+
+```{r}
+# In-sample R2
+cor(drop(d_hat), d)^2
+```
+
+So the in-sample R2 value suggests that $\approx 8.19$ % of the variance in d is explained by the control variables. Thus the model does not have a tight fit, and this implies that there may be other confounding variables not included in the model that account for d.
+
+Thus the predictive power of our model is limited due to the large percentage of unexplained variance in d. And further analyses may lead to less accurate and biased estimates, so our confidence in a estimating treatment effect would be low.
+
+\newpage
+
 ## Question 3
 
 ### Use predictions from [2] in an estimator for effect of d on loan.
-```{r}
-hh$predicted_d <- predict(model_d, type = "response")
 
+```{r}
+# Second Stage Lasso
+
+# Do a lasso of y on [d, d_hat, x], with d_hat unpenalized
+causal = gamlr(cbind(d, d_hat, x), y, free=2)
+
+# Second 
+print(coef(causal)["d",])
 ```
+
+Using the two-stage lasso process, we find the best predictor for y from d and x after the influence of d_hat is removed.
+
+We observe that the coefficient of the log transformed degree variable is 0.0187176, which suggests that there is a small positive relationship between the degree of connectivity and the likelihood of adopting a loan.
+
+```{r}
+exp(coef(causal)["d",])
+```
+
+By taking the exponential of the coefficient, we compute the odds ratio between degree and loan. That is, a one unit increase in the log transformed degree of connection corresponds to an $\approx 1.89$ % increase in the probability of a household taking a loan.
+
+\newpage
 
 ## Question 4
 
 ### Compare the results from [3] to those from a straight (naive) lasso for loan on d and x.
 
+```{r}
+# Compute a naive lasso for loan
+# We use binomial here since we know y (loan) is in [0,1]
+naive = gamlr(cbind(d, x), y, family="binomial")
+
+# Compare naive and 2-stage lasso
+cat("The coefficient for d from the naive lasso is:", coef(naive)["d",], "\n")
+cat("The coefficient for d from the causal lasso is:", coef(causal)["d",])
+```
+
+```{r}
+exp(coef(naive)["d",])
+```
+
 ### Explain why they are similar or different.
+
+Firstly we observe that the coefficient for `d` from the naive model is approximately an order of 10 greater than the one from the causal model. That is, a one unit increase in log transformed degree would suggest there would be a an $\approx 16.9$ % increase in the probability of a household taking a loan (compared to $\approx 1.89$ % from Q3).\
+
+They are different as the naive model does not separate the treatment and the control variables, but rather uses them all as independent variables in the regression. This may result in the coefficient for `d` having contributions from confounding variables which are not accounted for, and thus indicates a much more significant effect than the causal model.
+
+In comparison, the causal model involved a 2-stage LASSO process by incorporating **`d_hat`**, the predicted values of **`d`** based on **`x`**. This means that this model controlled for the portion of **`d`** that could be predicted from the control variables, aiming to isolate the more variation in d. (However there could still be effects from confounding variables that were not in the data set).
+
+So the two-stage Lasso model provides a more conservative but likely more accurate estimate by explicitly modeling and removing the predictable part of **`d`** based on the observed covariates **`x`**.
+
+\newpage
 
 ## Question 5
 
 ### Bootstrap your estimator from [3] and describe the uncertainty.
+
+\newpage
 
 ## [+]
 
