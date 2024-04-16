@@ -228,8 +228,69 @@ So the two-stage Lasso model provides a more conservative but likely more accura
 
 ### Bootstrap your estimator from [3] and describe the uncertainty.
 
+```{r}
+
+## BOOTSTRAP 
+n <- nrow(x)
+
+gamb = c() # empty gamma
+
+for(b in 1:50){
+	## create a matrix of resampled indices
+	ib = sample(1:n, n, replace=TRUE)
+
+	## create the resampled data
+	xb = x[ib,]
+	db = d[ib]
+	yb = y[ib]
+
+	## run the treatment regression
+	treatb = gamlr(xb,db,lambda.min.ratio=1e-3)
+	dhatb = predict(treatb, xb, type="response")
+	fitb = gamlr(cbind(db,dhatb,xb),yb,free=2)
+	gamb = c(gamb,coef(fitb)["db",])
+}
+```
+
+After running the bootstrap 50 times, we get the following summary statistics for the estimates:
+
+```{r}
+summary(gamb)
+```
+
+We can also plot a histogram to observe the variability in the estimates, with a red line for our original non-bootstrapped estimate:
+
+```{r}
+hist(gamb)
+abline(v=coef(causal)["d",], col=2)
+```
+
+We also plot a box plot and note the standard deviation:
+
+```{r}
+boxplot(gamb)
+```
+
+```{r}
+cat("The standard deviation in estimates is: ", sd(gamb))
+```
+
+So after running the bootstrap 50 times, we observe that the median estimate is $\approx 0.0196$, with a standard deviation of $\approx 0.004$. So the bootstrap estimates seem to have fairly low variability which suggests that the estimate obtained this way is stable.
+
+From the boxplot, we observe that the interquartile range is fairly narrow, which suggests that the estimates are centered around the median, and also suggests that the model prediction is robust.
+
+Finally the histogram shows that the estimates seem to form a symmetric distribution, centered around the median. Further the original estimate from the full model is close to the center of the bootstrapped estimates which suggests that the original estimate was also robust.
+
 \newpage
 
-## [+]
+## [Bonus]
 
 ### Can you think of how you’d design an experiment to estimate the treatment effect of network degree?
+
+In order to design such as experiment, one would ideally create a randomized experiment where one randomly selected group of individuals would increase their network degree, and the others would not.
+
+However, this is easier said than done, as in real life increasing one's connections or network is not as simple as just asking someone to do so, and such processes take considerable time. However, one possible alternative is to randomly assign certain households to receive targeted opportunities and encouragement to increase their network and social connections. This could be in the form of community events, participation in social groups, or general networking opportunities. The other households would not receive such opportunities and would be left as a control group.
+
+Following the experiment, we could then remeasure the outcome of interest (loan uptake) and compare the outcomes between the two groups. However, one would have to make sure that the control group's network stayed similar and the target group's network did increase before forming any conclusions.
+
+However, there a few concerns regarding such an experiment. Firstly there could be spillover effects, where the treatment affects the control group as there might be mutual connections between the two groups. In such cases it would be harder to measure the treatment effect. Further, there might be also ethical concerns that the experiment we perform is manipulating human relationships and interactions, which is a topic that requires some sensitivity. In addition, some may view it as unfair if some people in a village get more networking opportunities and encouragement whilst others do not have the same access.
