@@ -118,23 +118,6 @@ head(hh)
 
 ### Build a model to predict d from x, our controls.
 
-### Comment on how tight the fit is, and what that implies for estimation of a treatment effect.
-
-```{r}
-model_d <- lm(d ~ village + religion + roof + rooms + beds + electricity + ownership + leader, data = hh)
-# Display model summary
-summary(model_d)
-plot(model_d)
-```
-
-In this model, some variables, like rooms, electricity, beds, and leader, are statistically significant, implying they have a notable impact on the response variable.
-
-The model we've run seems reasonably well-specified based on the first plot but does show potential outliers.The presence of influential points, as suggested by the fourth plot, means that the estimated treatment effect may be driven by a small number of cases. Thus, while there are indicators of a decent model fit, the presence of outliers and influential points suggests that the treatment effect estimation may be sensitive to particular data points. When interpreting treatment effects, it's crucial to consider these factors, as they can affect the validity and generalizability of the findings.
-
-------------------------------------------------------------------------
-
-\newpage
-
 ```{r}
 # control variables
 x = model.matrix(d ~ village + religion + roof + rooms + beds + electricity + ownership + leader - 1, data = hh)  # -1 to omit intercept
@@ -154,6 +137,10 @@ d_hat = predict(treat, x, type="response")
 # Plot d_hat against d
 plot(d_hat, d)
 ```
+
+\newpage
+
+### Comment on how tight the fit is, and what that implies for estimation of a treatment effect.
 
 To assess the model fit, we can compute the in sample R2
 
@@ -275,9 +262,9 @@ boxplot(gamb)
 cat("The standard deviation in estimates is: ", sd(gamb))
 ```
 
-So after running the bootstrap 50 times, we observe that the median estimate is $\approx 0.0196$, with a standard deviation of $\approx 0.004$. So the bootstrap estimates seem to have fairly low variability which suggests that the estimate obtained this way is stable.
+So after running the bootstrap 50 times, we observe that the median estimate is $\approx 0.0178$, with a standard deviation of $\approx 0.005$. So the bootstrap estimates seem to have fairly low variability which suggests that the estimate obtained this way is stable.
 
-From the boxplot, we observe that the interquartile range is fairly narrow, which suggests that the estimates are centered around the median, and also suggests that the model prediction is robust.
+From the box-plot, we observe that the interquartile range is fairly narrow, which suggests that the estimates are centered around the median, and also suggests that the model prediction is robust.
 
 Finally the histogram shows that the estimates seem to form a symmetric distribution, centered around the median. Further the original estimate from the full model is close to the center of the bootstrapped estimates which suggests that the original estimate was also robust.
 
