@@ -20,6 +20,7 @@ knitr::opts_chunk$set(echo = TRUE,
                       cache = TRUE,
                       digits = 3,
                       width = 48) 
+set.seed(123)
 ```
 
 ```{r}
@@ -262,7 +263,7 @@ boxplot(gamb)
 cat("The standard deviation in estimates is: ", sd(gamb))
 ```
 
-So after running the bootstrap 50 times, we observe that the median estimate is $\approx 0.0178$, with a standard deviation of $\approx 0.005$. So the bootstrap estimates seem to have fairly low variability which suggests that the estimate obtained this way is stable.
+So after running the bootstrap 50 times, we observe that the median estimate is $\approx 0.0181$, with a standard deviation of $\approx 0.005$. So the bootstrap estimates seem to have fairly low variability which suggests that the estimate obtained this way is stable.
 
 From the box-plot, we observe that the interquartile range is fairly narrow, which suggests that the estimates are centered around the median, and also suggests that the model prediction is robust.
 
