@@ -89,7 +89,7 @@ actj <- factor(unlist(casts), levels=V(actnet)$name)
 actmat <- sparseMatrix(i=as.numeric(acti),j=as.numeric(actj),
 		dimnames=list(movie=levels(acti),actor=levels(actj)))
 
-## count the number of appearences by actor
+## count the number of appearances by actor
 
 nroles <- colSums(actmat)
 
@@ -187,19 +187,63 @@ From order 2 to 3, we still observe an increase, but the magnitude of the change
 
 ## Question 3
 
-### Who were the most common actors? 
-
 ```{r}
+# Create a combined data frame with actor's appearances and connections
+actor_stats = data.frame(
+  Name = names(nroles),
+  Appearances = as.numeric(nroles),
+  Connections = degree(actors_network)[match(names(nroles), names(degree(actors_network)))]
+)
 
+# Sort by appearances and then connections
+actor_stats = actor_stats[order(-actor_stats$Appearances, -actor_stats$Connections),]
 ```
 
 
-
 ### Who were the most common actors? 
+
+```{r}
+# Display the top actors
+head(actor_stats, n=10)
+```
+
+The 5 most common actors (ranked in terms of most movie appearances) are:
+- Zivojinovic, Velimir 'Bata'  
+- Jeremy, Ron
+- Doll, Dora
+- Dobtcheff, Vernon
+- Berléand, François
 
 ### Who were most connected?
 
+```{r}
+# Sort by connections and print
+head(actor_stats[order(-actor_stats$Connections),], n=10)
+```
+The 5 most connected actors are:
+- Dobtcheff, Vernon
+-	Stévenin, Jean-François
+- Muel, Jean-Paul
+- Blanche, Roland
+- Garrivier, Victor
+
 ### Pick a pair of actors and describe the shortest path between them.
+
+We will pick Dobtcheff, Vernon and Bacon, Kevin.
+```{r}
+# Find vertices corresponding to both actors
+vertex1 = which(V(actors_network)$name == "Dobtcheff, Vernon")
+vertex2 = which(V(actors_network)$name == "Bacon, Kevin")
+
+# Calculate the shortest path
+path = shortest_paths(actors_network, vertex1, vertex2, mode = "all")
+path_vertices = path$vpath[[1]]
+
+# Display the shortest path
+V(actors_network)$name[path_vertices]
+```
+The shortest path between Vernon and Kevin is via Ashby, Linden.  
+That is, Kevin co-appeared in a movie with Linden, who also co-appeared in a different movie with Vernon, thus making the shortest path consist of 2 edges.
 
 \newpage
 
@@ -207,9 +251,35 @@ From order 2 to 3, we still observe an increase, but the magnitude of the change
 
 ### Find pairwise actor-cast association rules with at least 0.01% support and 10% confidence. Describe what you find.
 
-```{r}
+```{r include=FALSE}
+# Pairwise ssociation rules
+rules = apriori(casttrans, 
+                 parameter=list(supp=0.0001,
+                                conf=0.1,
+                                minlen=2, maxlen=2,
+                                target="rules"))
+
+# Sort rules by confidence
+rules_sorted <- sort(rules, by="confidence", decreasing=TRUE)
 ```
 
+```{r}
+# Inspect the top rules
+inspect(head(rules_sorted))
+```
+Out of the top rules, they all have 100% confidence.  
+Selecting "Mizutani, Kei" and "Jô, Asami" as an example, we can interpret this as:  
+Given that Mizutani, Kei is in a movie (out of the movies in our network), 
+we are 100% sure that Jô, Asami is in the same movie.
+
+Selecting a different example:
+```{r}
+inspect(rules_sorted[1000])
+```
+From this rule, we have that given "Reso, Jason" is in a movie, we are 62.5% confident that "Levesque, Paul Michael" is in the same movie.
+
+It is interesting to note that there are many rules with high (or maximum confidence of 100%).
+This occurs when certain actors often appear together, indicating frequent collaborations between the two.
 \newpage
 
 ## [Bonus]
