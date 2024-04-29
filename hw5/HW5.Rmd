@@ -158,18 +158,23 @@ for (i in 1:3) {
                                mode="all")[[1]]
   
   # Store the number of vertices and edges
-  number_of_vertices[i] <- vcount(subgraph_kb)
-  number_of_edges[i] <- ecount(subgraph_kb)
+  number_of_vertices[i] = vcount(subgraph_kb)
+  number_of_edges[i] = ecount(subgraph_kb)
+  
+  V(subgraph_kb)$color = "yellow"
+  V(subgraph_kb)["Bacon, Kevin"]$color = "red"
   
   # Plot the subgraph
   plot(subgraph_kb, 
        main = paste("Neighborhood - Order", i),
-       vertex.size = 5,
-       vertex.label=ifelse(V(actors_network)$name == "Bacon, Kevin", V(actors_network)$name, NA),
-       vertex.label.color="purple",
-       layout=layout_with_fr(subgraph_kb))}
+       vertex.size = ifelse(V(subgraph_kb)$name == "Bacon, Kevin", 25, 10),
+       vertex.label = NA)}
 
 ```
+  
+Note that the red vertex corresponds to the actor "Kevin Bacon".  
+As order increases the number of vertices and edges also increase, however due to the number of overlaps the increase in size is not easily visible by plotting the networks.  
+For greater clarity, we count the amount of edges and vertices in each sub-graph below.  
 
 ### How does the size of the network change with order?
 ```{r}
@@ -331,4 +336,4 @@ rules_subset = subset(rules, (rhs %in% "Bacon, Kevin"))
 rules_subset_df = cbind(labels = labels(rules_subset), quality(rules_subset))
 kable(head(rules_subset_df))
 ```
-And in fact we observe that 4/5 LHS actors appearing in the pairwise actor-cast association rules with at least 0.01% support and 10% confidence for RHS actor Kevin Bacon, are in the top 6 positive coefficients from the logistic regression.
+And in fact we observe that all 5 LHS actors appearing in the pairwise actor-cast association rules with at least 0.01% support and 10% confidence for RHS actor Kevin Bacon, are in the top 7 positive coefficients from the logistic regression.
