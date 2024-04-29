@@ -17,17 +17,20 @@ See actors example code and data.
 I’ve limited the data to actors in more than ten productions over this time period (and to movies with more than ten actors).
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, 
-                      #include = TRUE, 
-                      fig.width = 6, fig.height = 4,
-                      warning = FALSE,
-                      cache = TRUE,
-                      digits = 3,
-                      width = 48) 
-# set.seed(123)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	fig.height = 4,
+	fig.width = 6,
+	warning = FALSE,
+	cache = TRUE,
+	digits = 3,
+	width = 48
+)
+ 
+library(knitr)
 ```
 
-```{r}
+```{r echo=TRUE, results='hide'}
 ## actors network example
 
 library(igraph)
@@ -170,11 +173,12 @@ for (i in 1:3) {
 
 ### How does the size of the network change with order?
 ```{r}
-data.frame(
+network_size = data.frame(
   Order = 1:3,
   Vertices = number_of_vertices,
   Edges = number_of_edges
 )
+kable(network_size)
 ```
 
 We observe that the network size increases significantly as order increases by 1.  
@@ -204,7 +208,7 @@ actor_stats = actor_stats[order(-actor_stats$Appearances, -actor_stats$Connectio
 
 ```{r}
 # Display the top actors
-head(actor_stats, n=10)
+kable(head(actor_stats, n=10))
 ```
 
 The 5 most common actors (ranked in terms of most movie appearances) are:
@@ -218,7 +222,7 @@ The 5 most common actors (ranked in terms of most movie appearances) are:
 
 ```{r}
 # Sort by connections and print
-head(actor_stats[order(-actor_stats$Connections),], n=10)
+kable(head(actor_stats[order(-actor_stats$Connections),], n=10))
 ```
 The 5 most connected actors are:
 - Dobtcheff, Vernon
@@ -260,12 +264,13 @@ rules = apriori(casttrans,
                                 target="rules"))
 
 # Sort rules by confidence
-rules_sorted <- sort(rules, by="confidence", decreasing=TRUE)
+rules_sorted = sort(rules, by="confidence", decreasing=TRUE)
 ```
 
 ```{r}
 # Inspect the top rules
-inspect(head(rules_sorted))
+rules_sorted_df = cbind(labels = labels(rules_sorted), quality(rules_sorted))
+kable(head(rules_sorted_df))
 ```
 Out of the top rules, they all have 100% confidence.  
 Selecting "Mizutani, Kei" and "Jô, Asami" as an example, we can interpret this as:  
@@ -274,7 +279,8 @@ we are 100% sure that Jô, Asami is in the same movie.
 
 Selecting a different example:
 ```{r}
-inspect(rules_sorted[1000])
+rule_1000 = cbind(labels = labels(rules_sorted[1000]), quality(rules_sorted[1000]))
+kable(rule_1000)
 ```
 From this rule, we have that given "Reso, Jason" is in a movie, we are 62.5% confident that "Levesque, Paul Michael" is in the same movie.
 
@@ -286,5 +292,43 @@ This occurs when certain actors often appear together, indicating frequent colla
 
 ### What would be a regression based alternative to ARules? Execute it for a single RHS actor.
 
+An alternative to ARules would be using logistic regression by modelling the probability of a RHS actor in ARules appearing in a movie based on the presence of other actors in that movie. 
+
+The RHS actor would be the dependent variable, and the presence of other actors would be independent variables. Since we already have `actmat` as a sparse matrix, we can use 'glmnet' to implement this.  
+By using $\alpha$ = 0.5, we use a blend of LASSO and Ridge regularization.
+
+For example, we will consider the actor Kevin Bacon:
+
 ```{r}
+library(glmnet)
+set.seed(1024)
+
+response_index = which(colnames(actmat) == "Bacon, Kevin")
+y = actmat[, response_index]  # Dependent variable
+X = actmat[, -response_index]  # Independent variables
+
+# Convert y to a binary factor (of appearance in movie)
+y = as.factor(as.integer(y))
+
+# Fit the logistic regression model with cross validation
+cv_model = cv.glmnet(X, y, family = "binomial", alpha = 0.25)
 ```
+By filtering out the non-zero coefficients we can observe which actors, when they appear in a movie, are predictors of Kevin Bacon's presence:
+```{r}
+# Select the non-zero coefficients
+coefs = as.data.frame(as.matrix(coef(cv_model, s = "lambda.min")))
+non_zero_coefs = coefs |> dplyr::filter(s1 != 0)|> dplyr::arrange(-s1)
+kable(non_zero_coefs)
+```
+So from the top 6 non-zero coefficients, we observe that the 6 actors above are all strong positive indicators of Kevin Bacon being in a movie.
+
+For example Terry Kinney has the largest positive coefficient of $\approx$ 3.8, which suggests that the odds of Kevin Bacon appearing in a movie are about 3.8 times greater when Terry Kinney is also in the cast compared to when Terry Kinney is not in the cast.
+
+We can also compare this to the RHS rules for Kevin Bacon using ARules:
+
+```{r}
+rules_subset = subset(rules, (rhs %in% "Bacon, Kevin"))
+rules_subset_df = cbind(labels = labels(rules_subset), quality(rules_subset))
+kable(head(rules_subset_df))
+```
+And in fact we observe that 4/5 LHS actors appearing in the pairwise actor-cast association rules with at least 0.01% support and 10% confidence for RHS actor Kevin Bacon, are in the top 6 positive coefficients from the logistic regression.
