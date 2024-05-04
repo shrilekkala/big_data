@@ -1,0 +1,172 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# BUS 41201 Homework 6 Assignment
+
+## Group 24: Shihan Ban, Yi Cao, Shri Lekkala, Ningxin Zhang
+
+## 7 May 2024
+
+## Introduction: Congressional Speech
+
+textir contains congress109 data: counts for 1k phrases used by each of 529 members of the 109th US congress.\
+Load it with data(congress109).\
+See ?congress109.
+
+The counts are in congress109Counts.
+
+We also have congress109Ideology, a data.frame containing some information about each speaker.
+
+The includes some partisan metrics: - party (Republican, Democrat, or Independent)\
+- repshare: share of constituents voting for Bush in 2004\
+- Common Scores [cs1,cs2]: basically, the first two principal components of roll-call votes
+
+No starter script; look at we8there.R and wine.R.
+
+```{r}
+library(textir)
+
+# Load the congress109 data
+data(congress109)  
+
+speech_data = congress109Counts
+ideology_data = congress109Ideology
+```
+
+\newpage
+
+## Question 1
+
+### Fit K-means to speech text for K in 5,10,15,20,25.
+
+```{r}
+# scale the data
+speech_data_scaled = 100*speech_data/rowSums(speech_data)
+
+# store results in list
+k_values = c(5, 10, 15, 20, 25)
+clustering_results = list()
+
+for (k in k_values) {
+  clustering_results[[as.character(k)]] = kmeans(speech_data_scaled,
+                                                 centers = k,
+                                                 nstart = 10)
+}
+```
+
+### Use BIC to choose the K and interpret the selected model.
+
+```{r}
+# load the kIC function
+source("kIC.R")
+
+# store bic_values
+bic_values = list()
+
+for (k in k_values) {
+  kfit = clustering_results[[as.character(k)]]
+  bic_values[[as.character(k)]] = kIC(kfit, rule="B")  # Use BIC calculation
+}
+
+data.frame("BIC" = unlist(bic_values))
+best_k = k_values[which.min(bic_values)]
+```
+
+So the best k which minimizes the BIC out of these is k = 5 clusters.
+
+```{r}
+best_fit = clustering_results[[as.character(best_k)]]
+
+# size of each cluster
+best_fit$size
+
+# print clusters of size 1
+for (i in which(best_fit$size == 1)){
+  print(best_fit$cluster[best_fit$cluster == i])
+}
+
+```
+
+We notice that there are only 3 out of the 5 clusters that are not singleton sets. And notably cluster 3 has by far the largest number of elements with a size of 442.
+
+The two singleton clusters suggest that these may be outliers, for congressman with unique speech patterns or extreme views that are not typical of others in the dataset. These are "Michael Doyle" and "Gary Ackerman"
+
+The dominant cluster of 442 suggests that there is a large commonality in speech patterns amongst the majority of the congressmen, which might be the "average" behavior.
+
+\newpage
+
+## Question 2
+
+### Fit a topic model for the speech counts. Use Bayes factors to choose the number of topics, and interpret your chosen model.
+
+```{r}
+library(maptpx)
+
+## Convert speech counts from a Matrix to a `slam' simple_triplet_matrix
+x_speech = as.simple_triplet_matrix(speech_data_scaled)
+
+## Supply a vector of topic sizes, and it uses a Bayes factor to choose
+## The algorithm stops if BF drops twice in a row
+
+tpcs = topics(x_speech, K = 5*(1:5), verb = 1)
+```
+
+So for each K in (5, 10, 15, 20, 25), a topics model model was fitted and K = 5 is chosen as it has the highest Bayes Factor (analogous to lowest BIC).
+
+```{r}
+summary(tpcs)
+```
+
+```{r}
+# Also look at words ordered by simple in-topic prob
+# topic-term probability matrix is called 'theta' 
+
+# Rank terms by probability within topics
+
+# Number of topics in the model
+num_topics = dim(tpcs$theta)[2]
+top_words_by_topic = list()
+
+# Loop through each topic to get the top 10 words
+for (i in 1:num_topics) {
+    top_words = rownames(tpcs$theta)[order(tpcs$theta[,i], decreasing = TRUE)[1:10]]
+    top_words_by_topic[[i]] = top_words
+}
+
+# Convert the list to a dataframe
+topics_dataframe = data.frame(
+    Topic = 1:num_topics,
+    Words = I(top_words_by_topic)
+)
+
+print(topics_dataframe$Words)
+```
+
+For each topic, we can examine the top phrases from the summary above:
+
+-   Topic 1: appears to focus on issues relating to crime and wealth inequality as suggested by the phrases "violent.sexual.predator", "world.poorest.people", and "tax.break.wealthy". It is notable that top 5 phrases for this has a high topic-over-null lift of 30.2%, which indicates how much more likely these phrases are likely to appear in this topic compared to the whole dataset.
+
+-   Topic 2: seems to capturing political discussions regarding terrorism and national security. Whilst this isn't immediately apparent from the top 5 phrases list, it becomes more apparent when looking at the list of most probabilistic words within each topic, with words such as "war.terror", "saddam.hussein", and "nuclear.weapon".
+
+-   Topic 3: captures issues and discussions relating to civil rights, racism, and minorities as suggested by the phrases ’little.rock.nine’, and ’minority.women.owned’. This is also apparent when examining the top 10 probabilistic words for this topic.
+
+-   Topic 4: includes phrases related to natural disasters and national issues as suggested by ’flood.insurance.program’, and ’domestic.violence’.
+
+-   Topic 5: seems to capture discussions regarding scientific research and medical topics as evidenced by the repeated phrase "stem.cel", as well as "commonly.prescribed.drug".
+
+So the chosen model with 5 topics had a high log Bayes factor of 14549.05 which indicates strong support for this mode. Further, each topic seems to capture a different set of themes with a clear focus on issues such as public policy, science, national security, and social issues.
+
+\newpage
+
+## Question 3
+
+### Connect the unsupervised clusters to partisanship. Tabulate party membership by K-means cluster. Are there any non-partisan topics?
+
+### Fit topic regressions for each of party and repshare. Compare to regression onto phrase percentages:
+
+```{r}
+# x<-100*congress109Counts/rowSums(congress109Counts)
+```
