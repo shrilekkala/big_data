@@ -26,8 +26,11 @@ The includes some partisan metrics: - party (Republican, Democrat, or Independen
 
 No starter script; look at we8there.R and wine.R.
 
-```{r}
+```{r echo = T, message = FALSE}
 library(textir)
+library(dplyr)
+library(tidyr)
+library(knitr)
 
 # Load the congress109 data
 data(congress109)  
@@ -43,8 +46,10 @@ ideology_data = congress109Ideology
 ### Fit K-means to speech text for K in 5,10,15,20,25.
 
 ```{r}
+set.seed(1024)
+
 # scale the data
-speech_data_scaled = 100*speech_data/rowSums(speech_data)
+speech_data_scaled = scale(as.matrix(speech_data/rowSums(speech_data)))
 
 # store results in list
 k_values = c(5, 10, 15, 20, 25)
@@ -90,9 +95,9 @@ for (i in which(best_fit$size == 1)){
 
 ```
 
-We notice that there are only 3 out of the 5 clusters that are not singleton sets. And notably cluster 3 has by far the largest number of elements with a size of 442.
+We notice that there are only 3 out of the 5 clusters that are not very small clusters. And notably cluster 2 has by far the largest number of elements with a size of 336.
 
-The two singleton clusters suggest that these may be outliers, for congressman with unique speech patterns or extreme views that are not typical of others in the dataset. These are "Michael Doyle" and "Gary Ackerman"
+The one singleton clusters suggests that this may be an outlier, for congressman with unique speech patterns or extreme views that are not typical of others in the dataset. This is "Carolyn McCarthy".
 
 The dominant cluster of 442 suggests that there is a large commonality in speech patterns amongst the majority of the congressmen, which might be the "average" behavior.
 
@@ -106,7 +111,7 @@ The dominant cluster of 442 suggests that there is a large commonality in speech
 library(maptpx)
 
 ## Convert speech counts from a Matrix to a `slam' simple_triplet_matrix
-x_speech = as.simple_triplet_matrix(speech_data_scaled)
+x_speech = as.simple_triplet_matrix(speech_data)
 
 ## Supply a vector of topic sizes, and it uses a Bayes factor to choose
 ## The algorithm stops if BF drops twice in a row
@@ -114,11 +119,15 @@ x_speech = as.simple_triplet_matrix(speech_data_scaled)
 tpcs = topics(x_speech, K = 5*(1:5), verb = 1)
 ```
 
-So for each K in (5, 10, 15, 20, 25), a topics model model was fitted and K = 5 is chosen as it has the highest Bayes Factor (analogous to lowest BIC).
+So for each K in (5, 10, 15, 20, 25), a topics model model was fitted and K = 10 is chosen as it has the highest Bayes Factor (analogous to lowest BIC).
 
 ```{r}
 summary(tpcs)
 ```
+
+The summary above shows us the top 5 phrases in each topic that have a high topic-over-null-lift, which indicates how much more likely these phrases are to appear in this topic than the whole dataset.
+
+In addition, for further clarity, we can examine the list of top 10 probabilistic words within each topic to aid our interpretation:
 
 ```{r}
 # Also look at words ordered by simple in-topic prob
@@ -145,19 +154,29 @@ topics_dataframe = data.frame(
 print(topics_dataframe$Words)
 ```
 
-For each topic, we can examine the top phrases from the summary above:
+For each topic, we can examine the top phrases as well as the list of most probabilistic words within each topic. After looking at this we can broadly classify each topic that captures discussions regarding certain themes:
 
--   Topic 1: appears to focus on issues relating to crime and wealth inequality as suggested by the phrases "violent.sexual.predator", "world.poorest.people", and "tax.break.wealthy". It is notable that top 5 phrases for this has a high topic-over-null lift of 30.2%, which indicates how much more likely these phrases are likely to appear in this topic compared to the whole dataset.
+-   Topic 1: Civil rights, healthcare reforms, and societal issues
 
--   Topic 2: seems to capturing political discussions regarding terrorism and national security. Whilst this isn't immediately apparent from the top 5 phrases list, it becomes more apparent when looking at the list of most probabilistic words within each topic, with words such as "war.terror", "saddam.hussein", and "nuclear.weapon".
+-   Topic 2: Immigration, and homeland security
 
--   Topic 3: captures issues and discussions relating to civil rights, racism, and minorities as suggested by the phrases ’little.rock.nine’, and ’minority.women.owned’. This is also apparent when examining the top 10 probabilistic words for this topic.
+-   Topic 3: Retirement planning, and fiscal policy
 
--   Topic 4: includes phrases related to natural disasters and national issues as suggested by ’flood.insurance.program’, and ’domestic.violence’.
+-   Topic 4: Foreign policy, and national security
 
--   Topic 5: seems to capture discussions regarding scientific research and medical topics as evidenced by the repeated phrase "stem.cel", as well as "commonly.prescribed.drug".
+-   Topic 5: Social security, and personal finance
 
-So the chosen model with 5 topics had a high log Bayes factor of 14549.05 which indicates strong support for this mode. Further, each topic seems to capture a different set of themes with a clear focus on issues such as public policy, science, national security, and social issues.
+-   Topic 6: Wealth inequality, and welfare of veterans
+
+-   Topic 7: Court proceedings, and hearings
+
+-   Topic 8: Socio-economic issues, and environmental topics
+
+-   Topic 9: Medical advancements, and scientific research
+
+-   Topic 10: Trade policies, and economic models
+
+So the chosen model with 10 topics had a high log Bayes factor of 76681.45 which indicates strong support for this model. Further, each topic seems to capture a different set of themes with a clear focus on issues such as public policy, science, national security, and social issues.
 
 \newpage
 
@@ -165,8 +184,65 @@ So the chosen model with 5 topics had a high log Bayes factor of 14549.05 which 
 
 ### Connect the unsupervised clusters to partisanship. Tabulate party membership by K-means cluster. Are there any non-partisan topics?
 
+```{r}
+# Merge Clustering Results with Party Data
+ideology_data$cluster = best_fit$cluster
+```
+
+```{r}
+# Create a summary table
+party_cluster_tabulation = ideology_data |>
+  group_by(cluster, party) |>
+  summarise(count = n(), .groups = 'drop') |>
+  spread(key = party, value = count, fill = 0)
+
+kable(party_cluster_tabulation)
+```
+
+Thus it appears that cluster 2 appears to be a non partisan topic as it has large members in both D and R.\
+It is difficult to say whether clusters 3 and 4 are non partisan topics as there is insufficient data about party memberships for these topics to form a definitive opinion.\
+On the otherhand clusters 1 and 5 appear to be clearly partisan topics with the former being dominated by party D and the latter by party R.
+
 ### Fit topic regressions for each of party and repshare. Compare to regression onto phrase percentages:
 
 ```{r}
-# x<-100*congress109Counts/rowSums(congress109Counts)
+x = 100*congress109Counts/rowSums(congress109Counts)
+
+# Fit topic regressions onto party
+
+regtopics_party = cv.gamlr(tpcs$omega, ideology_data$party, lambda.min.ratio=10^{-4})
+regphrases_party =cv.gamlr(x, ideology_data$party, lambda.min.ratio=10^{-4})
+
+par(mfrow=c(1,2))
+plot(regtopics_party)
+mtext("party - topic regression", font=2, line=2)
+
+plot(regphrases_party)
+mtext("party - phrases regression", font=2, line=2)
+
+min(regtopics_party$cvm)
+min(regphrases_party$cvm)
 ```
+
+```{r}
+# Fit topic regressions onto repshare
+
+regtopics_repshare = cv.gamlr(tpcs$omega, ideology_data$repshare, lambda.min.ratio=10^{-4})
+regphrases_repshare = cv.gamlr(x, ideology_data$repshare, lambda.min.ratio=10^{-4})
+
+par(mfrow=c(1,2))
+plot(regtopics_repshare)
+mtext("repshare - topic regression", font=2, line=2)
+
+plot(regphrases_repshare)
+mtext("repshare - phrases regression", font=2, line=2)
+
+min(regtopics_repshare$cvm)
+min(regphrases_repshare$cvm)
+```
+
+In both cases we observe that the topic model performs better than regression on to phrase percentages.
+
+For topic regression onto party, the minimum out of sample MSE was $\approx$ 0.45 vs $\approx$ 0.82 for standard regression.
+
+For regressions onto repshare, the minimum out of sample MSE for topics was still lower ($\approx$ 0.012 vs $\approx$ 0.015), but the margins were closer.
