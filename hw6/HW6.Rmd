@@ -31,6 +31,7 @@ library(textir)
 library(dplyr)
 library(tidyr)
 library(knitr)
+library(kableExtra)
 
 # Load the congress109 data
 data(congress109)  
@@ -100,6 +101,27 @@ We notice that there are only 3 out of the 5 clusters that are not very small cl
 The one singleton clusters suggests that this may be an outlier, for congressman with unique speech patterns or extreme views that are not typical of others in the dataset. This is "Carolyn McCarthy".
 
 The dominant cluster of 442 suggests that there is a large commonality in speech patterns amongst the majority of the congressmen, which might be the "average" behavior.
+
+We can examine the clusters by looking at the top 5 most central words in each cluster:\
+
+```{r}
+kable(apply(best_fit$centers[1:3, ], 1, function(c) colnames(speech_data_scaled)[order(-c)[1:10]]))
+kable(apply(best_fit$centers[4:5, ], 1, function(c) colnames(speech_data_scaled)[order(-c)[1:10]]))
+```
+\newpage
+From this we can get a sense for the main themes of discussion within each cluster:
+
+-   Cluster 1: fiscal and economic policy issues
+
+-   Cluster 2: immigration and borders
+
+-   Cluster 3: international aid and global issues
+
+-   Cluster 4: gun violence
+
+-   Cluster 5: housing and judicial matters
+
+It is further interesting to note that the singleton cluster (cluster 4) does not appear to have variation in themes in the top 10 words, which suggests that Carolyn McCarthy seems to engage in discussions that focus on a single issue, which is reducing gun violence.
 
 \newpage
 
@@ -201,7 +223,7 @@ kable(party_cluster_tabulation)
 
 Thus it appears that cluster 2 appears to be a non partisan topic as it has large members in both D and R.\
 It is difficult to say whether clusters 3 and 4 are non partisan topics as there is insufficient data about party memberships for these topics to form a definitive opinion.\
-On the otherhand clusters 1 and 5 appear to be clearly partisan topics with the former being dominated by party D and the latter by party R.
+On the other hand clusters 1 and 5 appear to be clearly partisan topics with the former being dominated by party D and the latter by party R.
 
 ### Fit topic regressions for each of party and repshare. Compare to regression onto phrase percentages:
 
@@ -215,10 +237,10 @@ regphrases_party =cv.gamlr(x, ideology_data$party, lambda.min.ratio=10^{-4})
 
 par(mfrow=c(1,2))
 plot(regtopics_party)
-mtext("party - topic regression", font=2, line=2)
+mtext("Party - Topics regression", font=2, line=2)
 
 plot(regphrases_party)
-mtext("party - phrases regression", font=2, line=2)
+mtext("Party - Phrases regression", font=2, line=2)
 
 min(regtopics_party$cvm)
 min(regphrases_party$cvm)
@@ -232,10 +254,10 @@ regphrases_repshare = cv.gamlr(x, ideology_data$repshare, lambda.min.ratio=10^{-
 
 par(mfrow=c(1,2))
 plot(regtopics_repshare)
-mtext("repshare - topic regression", font=2, line=2)
+mtext("Repshare - Topic regression", font=2, line=2)
 
 plot(regphrases_repshare)
-mtext("repshare - phrases regression", font=2, line=2)
+mtext("Repshare - Phrases regression", font=2, line=2)
 
 min(regtopics_repshare$cvm)
 min(regphrases_repshare$cvm)
