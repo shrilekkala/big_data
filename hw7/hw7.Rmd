@@ -29,6 +29,7 @@ library(knitr)
 library(kableExtra)
 library(ggplot2)
 library(reshape2)
+library(corrplot)
 fx <- read.csv("C:/Users/23713/Downloads/FXmonthly.csv")
 fx <- (fx[2:120,]-fx[1:119,])/(fx[1:119,])
 ```
@@ -41,24 +42,30 @@ Discuss correlation amongst dimensions of fx. How does this relate to the applic
 ```{r}
 cor_matrix <- cor(fx, use = "complete.obs")  
 
-melted_cor_matrix <- melt(cor_matrix)
-ggplot(melted_cor_matrix, aes(Var1, Var2, fill = value)) +
-  geom_tile() +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
-  theme_minimal() +
-  labs(title = "Correlation Matrix Heatmap", x = "Variable 1", y = "Variable 2", fill = "Correlation")
+corrplot(cor_matrix, method = "circle", tl.cex = 0.7)
+
+
+# melted_cor_matrix <- melt(cor_matrix)
+# ggplot(melted_cor_matrix, aes(Var1, Var2, fill = value)) +
+# geom_tile() +
+# scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
+# theme_minimal() +
+# labs(title = "Correlation Matrix Heatmap", x = "Variable 1", y = "Variable 2", fill = "Correlation")
+
 
 ```
 
 The color gradient of the heatmap spans from red to white to blue, signifying correlations from 1.00 to -0.25. Red signifies a strong positive correlation, white denotes no correlation, and blue indicates negative correlations. The prevalence of red hues across the matrix suggests numerous variables are positively correlated to a moderate or strong extent. Darker red clusters hint at variables strongly correlated, possibly indicating their joint movement or shared influences. Sparse blue areas suggest minimal negative correlations between variables, implying few pairs show inverse relationships in the dataset. As expected, the diagonal, reflecting self-correlations, shines bright red, indicating a perfect correlation of 1.00.
 
+Upon calculating the correlation matrix for the `fx` dataset and visualizing it through a heatmap, we discern that the majority of variables showcase positive correlations with one another. Particularly striking is the notable positive correlation between exenus and exdnus, nearing a value of 1, implying a high likelihood of synchronized movements. Additionally, pairs such as `exszus` and `exdnus`, `exsdus` and `exdnus`, `exeuus` and `exsdus`, and `exeuus` and `exexszus` also exhibit substantial positive correlations. Conversely, several pairs, including `exmxus` and `exjpus`, `exmxus` and `exhkus`, demonstrate negative correlations, suggesting opposing movements. Despite most variables displaying non-zero correlations with one another, `exvzus`, `exslus`, `exhkus`, and `exchus` appear to exhibit relatively weak correlations (close to zero) with the other variables.
+
 # applicability of factor modelling
 
-The prevalence of high positive correlations, indicated by the dark red areas, implies shared underlying factors among these variables, making it conducive to factor modeling. Factor models aim to diminish dimensionality by identifying a handful of underlying factors that elucidate the observed correlations across multiple variables. Given the strong correlations among many variables, principal component analysis (PCA) or another factor analysis method could efficiently reduce dataset dimensions by extracting key components that encapsulate the majority of variability.
+The prevalence of high positive correlations, indicated by the dark blue areas, implies shared underlying factors among these variables, making it conducive to factor modeling. Factor models aim to diminish dimensionality by identifying a handful of underlying factors that elucidate the observed correlations across multiple variables. Given the strong correlations among many variables, principal component analysis (PCA) or another factor analysis method could efficiently reduce dataset dimensions by extracting key components that encapsulate the majority of variability.
  
 
 
-\newpage
+
 
 
 ## question 2 
@@ -74,7 +81,18 @@ plot(pcafx, main="")
 
 The analysis of variance explained by principal components (PCs) reveals that PC1 accounts for a significant portion of dataset variance, specifically 44.25%, indicating its ability to capture a substantial part of the data's variability. PC2 contributes an additional 11.00%, resulting in a cumulative variance explained of 55.25% for the first two components. Subsequent components show diminishing contributions to variance, with cumulative proportions gradually increasing towards 100% by PC21. By PC5, over 75% of the dataset's variance is explained, indicating that the first five components capture the majority of information, while PC8 reaches approximately 82%, suggesting that additional components beyond this point contribute incrementally less to overall data variability. Visually, the scree plot underscores this trend, displaying a steep drop after the first component and another noticeable decrease after the second, aligning with the 'elbow' method's indication that crucial information is primarily captured within the initial components, particularly by the fifth component.
 
+
+
+```{r}
+par(mfrow=c(1,3))
+biplot(pcafx, choices = c(1, 2))
+biplot(pcafx, choices = c(3, 4))
+biplot(pcafx, choices = c(5, 6))
+```
+The provided plots depict biplot visualizations of a dataset across different pairs of principal components: PC1 & PC2, PC3 & PC4, and PC5 & PC6. In the first plot for PC1 and PC2, most variables and observation points are densely packed, suggesting that these components capture the major variation within the data. The second plot, showcasing PC3 and PC4, displays a more dispersed arrangement of data points and variable vectors, indicating that these components represent secondary structural or variational aspects of the data. The third plot, for PC5 and PC6, shows even more sparse distributions, which usually means that these components capture the subtlest variations. As we progress from the first to the third plot, the dispersion of points on corresponding principal components increases, aligning with the typical characteristic of PCA where initial components contain most of the data's variability, and subsequent components explain progressively less variation. Additionally, the direction and length variations of the variable vectors across these plots help elucidate how different variables influence these components, thereby revealing inter-variable correlations and underlying data structures in a comprehensive manner.
 \newpage
+
+
 
 ## question 3
 
@@ -83,7 +101,7 @@ Regress SP500 returns onto currency movement factors, using both ‘glm on first
 Use the results to add to your factor interpretation.
 
 ```{r}
-sp <- read.csv("C:/Users/23713/Downloads/sp500.csv")
+sp <- read.csv("C:/Users/23713/Downloads/sp500.csv") # you can use your own document address
 
 # Find how many components sum to at least 90% of the variance
 cumulative_variance <- summary(pcafx)$importance[3,]
@@ -103,18 +121,21 @@ kfits <- lapply(1:12,
 	function(K) glm(sp500~., data=zdf[,1:K,drop=FALSE]))
 
 aicc <- sapply(kfits, AICc) # apply AICc to each fit
-which.min(aicc) 
+# Find the index of the minimum AICc value
+min_aicc_index <- which.min(aicc)
+cat("Index of minimum AICc:", min_aicc_index, "\n")
 
 bic <- sapply(kfits, BIC) 
-
-which.min(bic)
+# Find the index of the minimum BIC value
+min_bic_index <- which.min(bic)
+cat("Index of minimum BIC:", min_bic_index, "\n")
 ```
 
 
 ```{r}
-plot(aicc) 
+plot(aicc, ylab="AICc", xlab="K", main="AICc") 
 ```
- 
+
  
 # compare to the output by the lasso
 
@@ -139,7 +160,7 @@ Combining the results from PCA and regression models, we gain a comprehensive un
  
 
 
-\newpage 
+
 
 ## question 4
 Fit lasso to the original covariates and describe how it differs from PCR here.
@@ -153,9 +174,6 @@ plot(lassoPCR, main="PCR")
 ```
 
  In the provided plots comparing Lasso regression on original covariates and Principal Component Regression (PCR), key differences emerge in model complexity and prediction accuracy. Lasso directly applies to the original variables, offering a sparse model that emphasizes variable selection, potentially enhancing interpretability by identifying key predictors. In contrast, PCR reduces dimensionality by focusing on principal components, which represent major variance directions, potentially reducing the impact of multicollinearity and noise. The plots illustrate that PCR might start with a lower mean squared error (MSE) at higher lambda values, suggesting better initial robustness against overfitting, whereas Lasso shows a continuous decrease in MSE with more complex models until stabilizing. The choice between these methods should consider the specific data characteristics and analytical goals: Lasso for direct variable impact analysis and PCR for capturing underlying data patterns when dealing with high-dimensional or multicollinear data. Overall, cross-validation results such as those shown guide the selection process by empirically demonstrating each method's predictive performance and complexity trade-offs.
- 
- 
- 
  
  
  
