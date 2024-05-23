@@ -1,0 +1,107 @@
+---
+title: |
+    | \includegraphics[width=16cm]{files/booth_logo.jpg} 
+    |
+    | BUSN 41201 - Big Data - Final Project
+    |
+    |
+    | \LARGE \textbf{PROJECT TITLE}
+subtitle: |
+    |
+    |
+    | 
+    | **26 May 2024**
+    | **Yi Cao, Shri Lekkala, Ningxin Zhang **
+output:
+  pdf_document: 
+    toc: no
+    includes:
+      in_header: files/header.tex
+  html_document:
+    toc: no
+---
+\newpage
+```{=latex}
+\setcounter{tocdepth}{4}
+\tableofcontents
+```
+Note: The full the code used in all the questions can be found in the appendix.
+
+
+\newpage
+```{r setup, include=FALSE}
+
+##########################################
+# Setup
+##########################################
+
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.height = 4,
+	fig.width = 6,
+	warning = FALSE,
+	cache = TRUE,
+	digits = 3,
+	width = 48
+)
+ 
+# Required Packages
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+```
+
+```{r include=FALSE}
+# Import the data
+data = "abc"
+```
+
+
+## 1. Executive Summary
+
+\newpage
+## 2. Introduction
+
+\newpage
+## 3. Exploratory Analysis
+
+### a)
+
+### b)
+
+\newpage
+## 4. Our Question 1 ?
+### A. Introduction
+### B. Analysis
+#### Model 1.
+#### Model 2.
+#### Model 3.
+### C. Conclusion
+
+\newpage
+## 5. Our Question 2 ?
+### A. Introduction
+### B. Analysis
+#### Model 1.
+#### Model 2.
+#### Model 3.
+### C. Conclusion
+
+\newpage
+## 6. Our Question 3 ?
+### A. Introduction
+### B. Analysis
+#### Model 1.
+#### Model 2.
+#### Model 3.
+### C. Conclusion
+
+\newpage
+## 7. Conclusion
+
+\newpage
+## 8. Appendix
+
+```{r, ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
