@@ -57,6 +57,7 @@ library(tidyverse)
 library(ggplot2)
 library(dplyr)
 library(corrplot)
+library(grid)
 library(gridExtra)
 library(RColorBrewer)
 library(kableExtra)
@@ -196,7 +197,9 @@ After this, we are left with 10356 rows.
 ```{r include=FALSE}
 # Remove all rows with nans
 googleplaystore_user_reviews <- googleplaystore_user_reviews_raw |>
-  filter(Translated_Review != "nan") 
+  filter(Translated_Review != "nan") |>
+  # Convert Sentiment to factor
+  mutate(Sentiment = as.factor(Sentiment))
 ```
 With the `googleplaystore_user_reviews` dataset, the variables were already well structured,
 but we noticed there were many rows with "nan"s.
@@ -443,9 +446,42 @@ kable(combined_df, caption = "Top 10 Genres and Categories", align = 'c') %>%
 ```
 
 
+### d) Relationship between categorical features and y
 
+### e) Sentiment dataset
+In the "googleplaystore_user_reviews" dataset, there are already pre-processed features indicating the Sentiment of the review, its polarity, and its subjectivity. Below we visualize the distributions of these features:
 
-### d)
+```{r echo=FALSE, fig.align='center', fig.height = 9, fig.width=12}
+##########################################
+# 4. e) Categorical Features
+##########################################
+
+# Distribution of Sentiments
+p1 = ggplot(googleplaystore_user_reviews, aes(x = Sentiment)) +
+  geom_bar(fill = "darkred") +
+  labs(title = "Distribution of Sentiments", x = "Sentiment", y = "Count") +
+  theme_minimal()
+
+p2 = googleplaystore_user_reviews |> 
+  ggplot(aes(x=Sentiment_Polarity, group=Sentiment, fill=Sentiment)) + 
+  geom_density(adjust=1.5, alpha=0.5)
+
+p3 = googleplaystore_user_reviews |> 
+  ggplot(aes(x=Sentiment_Subjectivity, group=Sentiment, fill=Sentiment)) + 
+  geom_density(adjust=1.5, alpha=0.5)
+
+# Arrange the plots in a grid
+# Arrange the plots in the specified layout
+p1_centered <- arrangeGrob(nullGrob(), p1, nullGrob(), ncol = 3)
+p2_p3_row <- arrangeGrob(p2, p3, ncol = 2)
+grid.arrange(p1_centered, p2_p3_row, nrow = 2)
+```
+
+Hence, we observe that the majority of reviews have a positive sentiment, which suggests that users tend to leave reviews when they are happy / satisfied with the app. However the number of negative reviews is greater than the number of neutrals which might indicate that users are more likely to leave a review if they feel strongly (either positive or negative) as opposed to being indifferent about it.  
+
+The density plot for polarities are as expected, as negative sentiments are clustered around negative polarity values, neutral sentiments around 0, and positive sentiments are spread across positive values. 
+
+Finally the subjectivity plot shows that a large right skew for neutral sentiments, which suggests that neutral reviews tend to be more objective. Interestingly, both negative and positive sentiments seem to be centered around a positive subjectivity score of around 0.5, which suggests that these reviews are more subjective and opinion-based.
 
 
 \newpage
