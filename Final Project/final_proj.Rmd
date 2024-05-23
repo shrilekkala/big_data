@@ -28,8 +28,10 @@ header-includes:
 \newpage
 ```{=latex}
 \setcounter{tocdepth}{4}
+\begin{spacing}{1.5}
 {\parskip=0pt
 \tableofcontents}
+\end{spacing}
 ```
 Note: The full the code used in all the questions can be found in the appendix.
 
