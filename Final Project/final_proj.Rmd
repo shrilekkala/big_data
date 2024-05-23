@@ -19,11 +19,16 @@ output:
       in_header: files/header.tex
   html_document:
     toc: no
+indent: true
+header-includes:
+    - \usepackage{setspace}\doublespacing
+    - \setlength{\parskip}{0.35cm plus2mm minus1mm}
 ---
 \newpage
 ```{=latex}
 \setcounter{tocdepth}{4}
-\tableofcontents
+{\parskip=0pt
+\tableofcontents}
 ```
 Note: The full the code used in all the questions can be found in the appendix.
 
@@ -59,9 +64,39 @@ data = "abc"
 
 
 ## 1. Executive Summary
+[REDO AFTER WE COMPLETE THE REPORT]  
+
+In this report, we present a comprehensive analysis of the "Google Play Store dataset" to gain insights into the characteristics and success factors of mobile applications. By examining various aspects related to app details, including categories, ratings, reviews, sizes, installations, and pricing, we aim to identify patterns and trends that contribute to an app's success on the Google Play Store.
+
+
+We begin by exploring the general statistics of apps, focusing on the distribution of app categories, ratings, and reviews. This provides a foundational understanding of the data and highlights key areas of interest. Next, we delve into specific analyses to understand the relationship between app size, installs, and pricing, exploring how these factors influence an app's popularity and user engagement.
+
+
+
+Our study also includes a sentiment analysis of user reviews, examining the polarity and subjectivity of feedback to understand how user sentiments correlate with app ratings and success. Additionally, we develop predictive models to forecast app ratings based on various features, and we investigate potential causal relationships between app characteristics and their performance metrics.
+
+
+By leveraging data visualization, feature engineering, and predictive modeling techniques, we aim to provide actionable insights for potential app developers. These insights can help optimize app features, improve user satisfaction, and ultimately enhance the app's visibility and success on the Google Play Store.
 
 \newpage
 ## 2. Introduction
+[WE CAN CHANGE THE QUESTIONS, THESE ARE JUST EXAMPLES]  
+
+In this paper, we aim to analyze the Google Play Store dataset to gain a comprehensive understanding of the factors that contribute to the success of mobile applications. The dataset includes details of apps such as categories, ratings, reviews, sizes, installations, and pricing, as well as user reviews with sentiment analysis. Our objective is to uncover patterns and trends that can help app developers optimize their offerings and improve user satisfaction.
+
+The Google Play Store dataset, available on Kaggle, consists of two files: `googleplaystore.csv`, which contains detailed information about the apps, and `googleplaystore_user_reviews.csv`, which includes user reviews and sentiment data.
+
+Our analysis will focus on the following research questions:
+
+- **What factors affect the number of installs an app receives?** Specifically, what is the relationship between app size, type (free or paid), price, and the number of installs?
+
+- **What are the key features that influence an app's rating?** 
+How do factors like category, price, and number of reviews contribute to the overall rating of an app?
+
+- **How does user sentiment in reviews correlate with app ratings?**   
+Can sentiment analysis of user reviews provide additional insights into user satisfaction and app performance?
+
+We will begin by loading and cleaning the dataset, followed by a thorough exploratory data analysis to uncover initial insights. Subsequently, we will perform detailed analyses to address our research questions, culminating in the development of predictive models and the identification of causal relationships. We will end by making concluding remarks from our research.
 
 \newpage
 ## 3. Exploratory Analysis
@@ -71,7 +106,7 @@ data = "abc"
 ### b)
 
 \newpage
-## 4. Our Question 1 ?
+## 4. What factors affect the number of installs an app receives?
 ### A. Introduction
 ### B. Analysis
 #### Model 1.
@@ -80,7 +115,7 @@ data = "abc"
 ### C. Conclusion
 
 \newpage
-## 5. Our Question 2 ?
+## 5. What are the key features that influence an app's rating?
 ### A. Introduction
 ### B. Analysis
 #### Model 1.
@@ -89,7 +124,7 @@ data = "abc"
 ### C. Conclusion
 
 \newpage
-## 6. Our Question 3 ?
+## 6. How does user sentiment in reviews correlate with app ratings?
 ### A. Introduction
 ### B. Analysis
 #### Model 1.
