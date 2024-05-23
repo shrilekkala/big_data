@@ -300,7 +300,7 @@ p12 <- ggplot(filtered_google, aes(x = Android.Ver)) +
   ggtitle("Top 10 of 22 Minimum Android Version")+common_theme
 ```
 
-```{r Echo = True}
+```{r Echo = TRUE}
 grid.arrange(p2,p7, p4, p3, p5, p6,p1, p8,p9,p10,p11,p12, nrow = 4, ncol = 3, heights = rep(1, 4), widths = rep(1, 3))
 ```
 
