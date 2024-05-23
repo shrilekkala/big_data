@@ -58,6 +58,8 @@ library(ggplot2)
 library(dplyr)
 library(corrplot)
 library(gridExtra)
+library(RColorBrewer)
+library(kableExtra)
 ```
 
 ## 1. Executive Summary
@@ -170,6 +172,14 @@ googleplaystore <- googleplaystore_raw |>
   ) |>
   # Remove apps with Type 0 or NA
   filter(Type %in% c("Free", "Paid")) |>
+  # Convert Category, Type, Content.Rating and Genres to factors
+  mutate(
+    App = as.factor(App),
+    Category = as.factor(Category),
+    Type = as.factor(Type),
+    Content.Rating = as.factor(Content.Rating),
+    Genres = as.factor(Genres)
+  ) |>
   # Remove duplicate rows
   distinct()
 
@@ -189,6 +199,10 @@ googleplaystore_user_reviews <- googleplaystore_user_reviews_raw |>
 With the `googleplaystore_user_reviews` dataset, the variables were already well structured,
 but we noticed there were many rows with "nan"s.
 After filtering these out, we were left with 37432 rows.
+
+\newpage
+## 4. Exploratory Analysis
+### a) Overall Historgram Overview
 ```{r include=FALSE}
 common_theme <- theme(
   axis.ticks.x = element_blank(), # Optional: Remove x-axis ticks if not needed
@@ -198,12 +212,12 @@ common_theme <- theme(
 )
 
 # Determine the top 10 values for categorical data
-top_categories <- googleplaystore %>% 
-  count(Category) %>% 
-  top_n(10) %>% 
+top_categories <- googleplaystore %>%
+  count(Category) %>%
+  top_n(10) %>%
   pull(Category)
 
-filtered_google <- googleplaystore %>% 
+filtered_google <- googleplaystore %>%
   filter(Category %in% top_categories) %>%
     mutate(Category = factor(Category, levels = names(sort(table(Category), decreasing = TRUE))))
 
@@ -238,18 +252,18 @@ p7 <- ggplot(googleplaystore, aes(x = Price)) +
   geom_histogram(bins = 30, fill = "darkred") +
   ggtitle("Price")+common_theme
 #########
-filtered_google <- googleplaystore %>% 
+filtered_google <- googleplaystore %>%
     mutate(Content.Rating = factor(Content.Rating, levels = names(sort(table(Content.Rating), decreasing = TRUE))))
 p8 <- ggplot(filtered_google, aes(x = Content.Rating)) +
   geom_bar(fill = "darkred") +
   ggtitle("Content Rating")+
   theme(axis.text.x = element_text(size = 6,angle = 90, hjust = 1, vjust = 0.5))+common_theme
 #########
-top_genres <- googleplaystore %>% 
-  count(Genres) %>% 
-  top_n(10) %>% 
+top_genres <- googleplaystore %>%
+  count(Genres) %>%
+  top_n(10) %>%
   pull(Genres)
-filtered_google <- googleplaystore %>% 
+filtered_google <- googleplaystore %>%
   filter(Genres %in% top_genres) %>%
   mutate(Genres = factor(Genres, levels = names(sort(table(Genres), decreasing = TRUE))))
 p9 <- ggplot(filtered_google, aes(x = Genres)) +
@@ -258,19 +272,128 @@ p9 <- ggplot(filtered_google, aes(x = Genres)) +
   theme(axis.text.x = element_text(size = 6,angle = 90, hjust = 1, vjust = 0.5))+common_theme
 ```
 
-```{r Echo = True}
+```{r Echo = FALSE}
 grid.arrange(p2,p7, p4, p3, p5, p6,p1, p8,p9, nrow = 3, ncol = 3, heights = rep(1, 3), widths = rep(1, 3))
 ```
 
 
-## 4. Exploratory Analysis
-### c)
+### b) Correlation Matrix
+We begin by analysing the correlation matrix of all the numeric variables for googleplaystore:
+
+```{r echo=FALSE, fig.align='center'}
+##########################################
+# 4. b) Correlation Matrix
+##########################################
+# Select only the numeric columns for the correlation matrix
+numeric_columns <- googleplaystore[, sapply(googleplaystore, is.numeric)]
+
+# Compute the correlation matrix
+cor_matrix <- cor(numeric_columns, use = "complete.obs")
+
+# Visualize the correlation matrix using a heatmap
+corrplot(cor_matrix, type = "upper",
+         tl.col = "black", tl.srt = 45,
+         addCoef.col = "black", number.cex = 0.7,
+         title = "Correlation Matrix of Google Play Store Data",
+         mar = c(0, 0, 1, 0))
+```
+This seems surprising initially as the variables appear to be fairly uncorrelated with eachother, except for the fact that "Installs" and "Reviews" which are highly correlated with a score of 0.64, which would make sense as one would expect a more popular app with a greater number of installs to also have a higher number of reviews.
+One surprising variable that is somewhat positively correlated with others is "Size", with small positive correlations with "Reviews" and "Installs". This might perhaps be due to the fact with apps with a larger download size are more 'complicated' and may perform more functions, and thus lead to a greater number of installations and thus reviews too.
+
+### c) Categorical Features
+We also look at the distribution of the categorical features in our dataset:
+```{r echo=FALSE, fig.align='center'}
+##########################################
+# 4. b) Categorical Features
+##########################################
+# Distribution of Types (Free vs. Paid)
+p1 <- ggplot(googleplaystore, aes(x = Type, fill = Type)) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of App Types", x = "Type", y = "Count") +
+  theme(legend.position = "none")
+
+# Distribution of Content Ratings
+p2 <- ggplot(googleplaystore, aes(x = `Content.Rating`, fill = `Content.Rating`)) +
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of Content Ratings", x = "Content Rating", y = "Count") +
+  theme(legend.position = "none")
+
+# Arrange the plots in a grid
+grid.arrange(p1, p2, ncol = 2)
+```
+So immediately we observe that there is a much greater proportion of free apps than paid,
+this aligns with the common "freemium" model where apps are free to download but may offer in-app purchases.
+This model also lowers the barrier to entry to users.
+
+The content rating distribution shows that the the significant majority of apps are aimed at is "Everyone".
+This indicates that most apps are designed to be accessible for a general audience, which makes sense if developers want the largest possible user base for their app.
+
+```{r echo=FALSE, fig.align='center'}
+# Count the number of apps in each category
+category_counts <- googleplaystore |>
+  count(Category) |>
+  arrange(desc(n))
+
+# Convert Category to a factor with levels ordered by count
+category_counts$Category <- factor(category_counts$Category, levels = category_counts$Category)
+
+# Plot the distribution of app categories sorted by count
+p3 = ggplot(category_counts, aes(x = n, y = Category, fill = Category)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of App Categories", x = "Count", y = "Category") +
+  theme(legend.position = "none") +
+  scale_fill_manual(values = colorRampPalette(brewer.pal(8, "Set2"))(nrow(category_counts))) +
+  theme(panel.grid.minor = element_blank()) +
+  coord_flip()
+
+# Count the number of apps in each genre
+genre_counts <- googleplaystore |>
+  count(Genres) |>
+  arrange(desc(n))
+
+# Convert Genres to a factor with levels ordered by count
+genre_counts$Genres <- factor(genre_counts$Genres, levels = genre_counts$Genres)
+
+# Plot the distribution of app genres sorted by count
+p4 = ggplot(genre_counts, aes(x = n, y = Genres, fill = Genres)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of App Genres", x = "Count", y = "Genres") +
+  theme(legend.position = "none") +
+  scale_fill_manual(values = colorRampPalette(brewer.pal(8, "Set2"))(nrow(genre_counts))) +
+  theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.text.x = element_blank()) +
+  coord_flip()
+
+p3
+p4
+```
+
+Next, looking at the distribution of category, sorted by count, we see that distribution is very heavily skewed to the right. In particular the first 3 categories (Family, Game, and Tools) have a very large number of apps, after which the count per category drops and falls slowly for the remaining categories.
+
+Secondly, from the genre distribution (recalling that genres are additional categories that apps can be listed as), we observe the same skewness. However the top 30-40% of genres contain most of the count, whereas afterwards the genres listed have a count of almost 0 which suggests that there are many genres with very few apps, suggesting either niche markets or less popular app types.
+
+```{r}
+# Combine the dataframes
+combined_df <- data.frame(
+  Rank = 1:10,
+  Category = category_counts[1:10,]$Category,
+  Category_Count = category_counts[1:10,]$n,
+  Genre = genre_counts[1:10,]$Genres,
+  Genre_Count = genre_counts[1:10,]$n
+)
+
+# Print the combined dataframe using kable
+kable(combined_df, caption = "Top 10 Genres and Categories", align = 'c') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+
+
 
 ### d)
-
-### e)
-
-### f)
 
 
 \newpage
