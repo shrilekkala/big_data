@@ -23,6 +23,7 @@ indent: true
 header-includes:
     - \usepackage{setspace}\doublespacing
     - \setlength{\parskip}{0.35cm plus2mm minus1mm}
+    - \AtBeginEnvironment{Shaded}{\singlespace}
 ---
 \newpage
 ```{=latex}
@@ -35,7 +36,6 @@ Note: The full the code used in all the questions can be found in the appendix.
 
 \newpage
 ```{r setup, include=FALSE}
-
 ##########################################
 # Setup
 ##########################################
@@ -56,12 +56,6 @@ library(ggplot2)
 library(dplyr)
 library(corrplot)
 ```
-
-```{r include=FALSE}
-# Import the data
-data = "abc"
-```
-
 
 ## 1. Executive Summary
 [REDO AFTER WE COMPLETE THE REPORT]  
@@ -99,14 +93,112 @@ Can sentiment analysis of user reviews provide additional insights into user sat
 We will begin by loading and cleaning the dataset, followed by a thorough exploratory data analysis to uncover initial insights. Subsequently, we will perform detailed analyses to address our research questions, culminating in the development of predictive models and the identification of causal relationships. We will end by making concluding remarks from our research.
 
 \newpage
-## 3. Exploratory Analysis
+## 3. Dataset
 
-### a)
+### a) Understanding the data
+```{r include=FALSE}
+##########################################
+# 3. a) Understanding the datasets
+##########################################
+# Load the datasets
+googleplaystore_raw <- read.csv("data/googleplaystore.csv")
+googleplaystore_user_reviews_raw <- read.csv("data/googleplaystore_user_reviews.csv")
 
-### b)
+# Check the column names
+colnames(googleplaystore_raw)
+colnames(googleplaystore_user_reviews_raw)
+
+# Check the dimensions
+dim(googleplaystore_raw)
+dim(googleplaystore_user_reviews_raw)
+```
+For `googleplaystore.csv` there are the following columns:  
+- App: Application Name  
+- Category: Category Type (e.g. Family, Game, Art)  
+- Rating: User rating review  
+- Reviews: Number of reviews  
+- Size: Download size of application  
+- Installs: Number of user downloads  
+- Type: Paid or Free  
+- Price: Price of App  
+- Content.Rating: Age group that app is targeted at (E.g. Everyone, Teen, Child)  
+- Genres: Other categories the app belongs to, other than the main category  
+- Last.Updated: Date when app was last updated  
+- Current.Ver: Current app version available  
+- Android.Ver: Minimum required Android version for app  
+There are a total of 10841 rows (applications).
+
+For `googleplaystore_user_reviews.csv` there are the following columns:  
+- App: Application Name  
+- Translated_Review: User review, translated to English  
+- Sentiment: Positive / Negative / Neutral (Preprocessed)  
+- Sentiment_Polarity: Sentiment polarity score (Preprocessed)  
+- Sentiment_Subjectivity: Sentiment subjectivity score (Preprocessed)
+
+This dataset contains the first 100 'most relevant' review for each app, 
+with some prepocessing already done to add the last 3 features.  
+There are a total of 64295 rows (reviews).
+
+
+### b) Data Cleaning
+```{r include=FALSE}
+##########################################
+# 3. b) Data Cleaning
+##########################################
+
+# Convert the variables to the appropriate data type
+googleplaystore <- googleplaystore_raw |>
+  mutate(
+    # Transform Installs and size to numeric
+    Installs = gsub("\\+", "", as.character(Installs)),
+    Installs = as.numeric(gsub(",", "", Installs)),
+    Size = gsub("M", "", Size),
+    # Convert apps with size < 1MB to 0, and transform to numeric
+    Size = ifelse(grepl("k", Size), 0, as.numeric(Size)),
+    # Transform reviews to numeric
+    Reviews = as.numeric(Reviews),
+    # Change currency numeric
+    Price = as.numeric(gsub("\\$", "", as.character(Price))),
+    # Convert Last.Updated to date
+    Last.Updated = mdy(Last.Updated),
+    # Change version number to 1 decimal, and add NAs where appropriate
+    Android.Ver = gsub("Varies with device", NA, Android.Ver),
+    Android.Ver = as.numeric(substr(Android.Ver, start = 1, stop = 3)),
+  ) |>
+  # Remove apps with Type 0 or NA
+  filter(Type %in% c("Free", "Paid")) |>
+  # Remove duplicate rows
+  distinct()
+
+```
+For the `googleplaystore` dataset, we first process the variables by converting 
+columns to the appropriate datatype. 
+For example Installs, Size, Reviews Price, and Android.Ver are converted to numerics, 
+Last.Updated is converted to date.
+Then we filter out apps with Type 0 or NA, and remove duplicated rows.  
+After this, we are left with 10356 rows.
+
+```{r include=FALSE}
+# Remove all rows with nans
+googleplaystore_user_reviews <- googleplaystore_user_reviews_raw |>
+  filter(Translated_Review != "nan") 
+```
+With the `googleplaystore_user_reviews` dataset, the variables were already well structured,
+but we noticed there were many rows with "nan"s.
+After filtering these out, we were left with 37432 rows.
+
+## 4. Exploratory Analysis
+### c)
+
+### d)
+
+### e)
+
+### f)
+
 
 \newpage
-## 4. What factors affect the number of installs an app receives?
+## 5. What factors affect the number of installs an app receives?
 ### A. Introduction
 ### B. Analysis
 #### Model 1.
@@ -115,7 +207,7 @@ We will begin by loading and cleaning the dataset, followed by a thorough explor
 ### C. Conclusion
 
 \newpage
-## 5. What are the key features that influence an app's rating?
+## 6. What are the key features that influence an app's rating?
 ### A. Introduction
 ### B. Analysis
 #### Model 1.
@@ -124,7 +216,7 @@ We will begin by loading and cleaning the dataset, followed by a thorough explor
 ### C. Conclusion
 
 \newpage
-## 6. How does user sentiment in reviews correlate with app ratings?
+## 7. How does user sentiment in reviews correlate with app ratings?
 ### A. Introduction
 ### B. Analysis
 #### Model 1.
@@ -133,10 +225,10 @@ We will begin by loading and cleaning the dataset, followed by a thorough explor
 ### C. Conclusion
 
 \newpage
-## 7. Conclusion
+## 8. Conclusion
 
 \newpage
-## 8. Appendix
+## 9. Appendix
 
 ```{r, ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
 ```
