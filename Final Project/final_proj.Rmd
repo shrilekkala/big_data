@@ -232,7 +232,8 @@ filtered_google <- googleplaystore %>%
 p1 <- ggplot(filtered_google, aes(x = Category)) +
   geom_bar(fill = "darkred") +
   ggtitle("Top 10 of 33 Categories")+
-  theme(axis.text.x = element_text(size = 8,angle = 45, hjust = 1))+common_theme
+  theme(axis.text.x = element_text(size = 8,angle = 45, hjust = 1)) + 
+  common_theme
 #########
 p2 <- ggplot(googleplaystore, aes(x = Rating)) +
   geom_histogram(bins = 30, fill = "darkred") +
@@ -241,7 +242,8 @@ p2 <- ggplot(googleplaystore, aes(x = Rating)) +
 p3 <- ggplot(googleplaystore, aes(x = Reviews)) +
   geom_histogram(bins = 30, fill = "darkred") +
   ggtitle("Reviews")+
-  theme(axis.text.x = element_text(size = 6,angle = 0, hjust = 1, vjust = 0.5))+common_theme
+  theme(axis.text.x = element_text(size = 6,angle = 0, hjust = 1, vjust = 0.5)) + 
+  common_theme
 #########
 p4 <- ggplot(googleplaystore, aes(x = Size)) +
   geom_histogram(bins = 30, fill = "darkred") +
@@ -250,7 +252,8 @@ p4 <- ggplot(googleplaystore, aes(x = Size)) +
 p5 <- ggplot(googleplaystore, aes(x = Installs)) +
   geom_histogram(bins = 30, fill = "darkred") +
   ggtitle("Installs")+
-  theme(axis.text.x = element_text(size = 6,angle = 0, hjust = 1, vjust = 0.5))+common_theme
+  theme(axis.text.x = element_text(size = 6,angle = 0, hjust = 1, vjust = 0.5)) + 
+  common_theme
 #########
 p6 <- ggplot(filtered_google, aes(x = Type)) +
   geom_bar(fill = "darkred") +
@@ -261,11 +264,14 @@ p7 <- ggplot(googleplaystore, aes(x = Price)) +
   ggtitle("Price")+common_theme
 #########
 filtered_google <- googleplaystore %>%
-    mutate(Content.Rating = factor(Content.Rating, levels = names(sort(table(Content.Rating), decreasing = TRUE))))
+    mutate(Content.Rating = factor(Content.Rating,
+                                   levels = names(sort(table(Content.Rating),
+                                                       decreasing = TRUE))))
 p8 <- ggplot(filtered_google, aes(x = Content.Rating)) +
   geom_bar(fill = "darkred") +
   ggtitle("Content Rating")+
-  theme(axis.text.x = element_text(size = 10,angle = 45, hjust = 1))+common_theme
+  theme(axis.text.x = element_text(size = 10,angle = 45, hjust = 1)) + 
+  common_theme
 #########
 top_genres <- googleplaystore %>%
   count(Genres) %>%
@@ -289,7 +295,8 @@ p10 <- ggplot(googleplaystore, aes(x = Last.Updated)) +
 #   pull(Current.Ver)
 # filtered_google <- googleplaystore %>%
 #   filter(Current.Ver %in% top_CurrentVer) %>%
-#   mutate(Current.Ver = factor(Current.Ver, levels = names(sort(table(Current.Ver), decreasing = TRUE))))
+  # mutate(Current.Ver = factor(Current.Ver,
+  #                             levels = names(sort(table(Current.Ver), decreasing = TRUE))))
 p11 <- ggplot(filtered_google, aes(x = Current.Ver)) +
   geom_histogram(fill = "darkred") +
   ggtitle("Current Version") +common_theme
@@ -300,7 +307,8 @@ p11 <- ggplot(filtered_google, aes(x = Current.Ver)) +
 #   pull(Android.Ver)
 # filtered_google <- googleplaystore %>%
 #   filter(Android.Ver %in% top_AndroidVer) %>%
-#   mutate(Android.Ver = factor(Android.Ver, levels = names(sort(table(Android.Ver), decreasing = TRUE))))
+  # mutate(Android.Ver = factor(Android.Ver,
+  #                             levels = names(sort(table(Android.Ver), decreasing = TRUE))))
 p12 <- ggplot(filtered_google, aes(x = Android.Ver)) +
   geom_histogram(fill = "darkred") +
   ggtitle("Minimum Android Version")+common_theme
@@ -363,7 +371,7 @@ One surprising variable that is somewhat positively correlated with others is "S
 We also look at the distribution of the categorical features in our dataset:
 ```{r echo=FALSE, fig.align='center'}
 ##########################################
-# 4. b) Categorical Features
+# 4. c) Categorical Features
 ##########################################
 # Distribution of Types (Free vs. Paid)
 p1 <- ggplot(googleplaystore, aes(x = Type, fill = Type)) +
@@ -374,7 +382,8 @@ p1 <- ggplot(googleplaystore, aes(x = Type, fill = Type)) +
 
 # Distribution of Content Ratings
 filtered_google <- googleplaystore %>%
-    mutate(Content.Rating = factor(Content.Rating, levels = names(sort(table(Content.Rating), decreasing = TRUE))))
+    mutate(Content.Rating = factor(Content.Rating,
+                                   levels = names(sort(table(Content.Rating), decreasing = TRUE))))
 p2 <- ggplot(filtered_google, aes(x = `Content.Rating`, fill = `Content.Rating`)) +
   geom_bar(fill = "darkred") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -398,7 +407,8 @@ category_counts <- googleplaystore |>
   arrange(desc(n))
 
 # Convert Category to a factor with levels ordered by count
-category_counts$Category <- factor(category_counts$Category, levels = category_counts$Category)
+category_counts$Category <- factor(category_counts$Category,
+                                   levels = category_counts$Category)
 
 # Plot the distribution of app categories sorted by count
 p3 = ggplot(category_counts, aes(x = n, y = Category, fill = Category)) +
@@ -425,7 +435,9 @@ p4 = ggplot(genre_counts, aes(x = n, y = Genres, fill = Genres)) +
   labs(title = "Distribution of App Genres", x = "Count", y = "Genres") +
   theme(legend.position = "none") +
   scale_fill_manual(values = colorRampPalette(brewer.pal(8, "Set2"))(nrow(genre_counts))) +
-  theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank(), axis.text.x = element_blank()) +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        axis.text.x = element_blank()) +
   coord_flip()
 
 p3
@@ -452,18 +464,23 @@ kable(combined_df, caption = "Top 10 Genres and Categories", align = 'c') %>%
 ```
 
 
-### d) Relationship between categorical features and y
-```{r}
+### d) Exploring Categorical Features vs Y
+```{r, fig.align='center'}
+##########################################
+# 4. d) Categorical Features
+##########################################
 # Create the box plot
 b1<-ggplot(googleplaystore, aes(x = Type, y = Rating)) +
-  geom_boxplot(outlier.color = "darkred", outlier.shape = 1,fill = "darkred") +  # Red for outliers
+  geom_boxplot(outlier.color = "darkred", outlier.shape = 1 
+               ,fill = "darkred") +  # Red for outliers
   labs(title = "Rating by Type",
        x = "Type",
        y = "Rating") +
   theme_minimal() 
 
 b2<-ggplot(googleplaystore, aes(x = Type, y = log(Installs))) +
-  geom_boxplot(outlier.color = "darkred", outlier.shape = 1,fill = "darkred") +  # Red for outliers
+  geom_boxplot(outlier.color = "darkred", outlier.shape = 1, 
+               fill = "darkred") +  # Red for outliers
   labs(title = "Log Installs by Type",
        x = "Type",
        y = "Log Install") +
@@ -476,9 +493,10 @@ The rating of free Apps display a broad range of ratings from 1 to 5, with most 
 
 The rating of free Apps have a broader distribution of log installs, with the median around 15. The range of installs is wide, showing that some free apps achieve significantly higher installs. The distribution of installs is noticeably more constrained and lower than that of free apps. The median log install is lower, and the range (IQR) is narrower, indicating less variation in the number of installs. Thus, free apps tend to reach more users, reflected by the higher median installs and wider distribution. This is expected as the barrier to try a free app is lower than for a paid app. Paid apps, while having fewer installs, tend to have a more consistent range of installs. This could suggest a dedicated user base willing to pay for apps that potentially offer higher quality or unique features not found in free apps.
 
-```{r}
+```{r, fig.align='center'}
 b1<-ggplot(googleplaystore, aes(x = Content.Rating, y = Rating)) +
-  geom_boxplot(outlier.color = "darkred", outlier.shape = 1,fill = "darkred") +  # Red for outliers
+  geom_boxplot(outlier.color = "darkred", outlier.shape = 1, 
+               fill = "darkred") +  # Red for outliers
   labs(title = "Rating by Content Rating",
        x = "Content Rating",
        y = "Rating") +
@@ -486,7 +504,8 @@ b1<-ggplot(googleplaystore, aes(x = Content.Rating, y = Rating)) +
   theme(axis.text.x = element_text(size = 6,angle = 45, hjust = 1, vjust = 1))
 
 b2<-ggplot(googleplaystore, aes(x = Content.Rating, y = log(Installs))) +
-  geom_boxplot(outlier.color = "darkred", outlier.shape = 1,fill = "darkred") +  # Red for outliers
+  geom_boxplot(outlier.color = "darkred", outlier.shape = 1, 
+               fill = "darkred") +  # Red for outliers
   labs(title = "Log Installs by Content Rating",
        x = "Content Rating",
        y = "Log Install") +
@@ -495,31 +514,34 @@ b2<-ggplot(googleplaystore, aes(x = Content.Rating, y = log(Installs))) +
 
 grid.arrange(b1, b2, ncol = 2)
 ```
+
 Content ratings such as "Everyone" and "Teen" cover a broad audience, resulting in higher downloads. Categories with restricted audiences like "Adults Only 18+" have both fewer downloads and lower ratings, possibly due to content restrictions or niche market appeal. Thus, Apps aimed at a general audience ("Everyone") might expect higher installations and generally favorable ratings, whereas apps targeted at adults or mature audiences might face more challenges in both downloads and user acceptance.
 
-```{r}
+```{r, fig.align='center'}
 # Create the box plot
 ggplot(googleplaystore, aes(x = Category, y = Rating)) +
-  geom_boxplot(outlier.color = "darkred", outlier.shape = 1,fill = "darkred") +  # Red for outliers
+  geom_boxplot(outlier.color = "darkred", outlier.shape = 1, 
+               fill = "darkred") +  # Red for outliers
   labs(title = "Distribution of Ratings by Category in Google Play Store",
        x = "Category",
        y = "Rating") +
   theme_minimal() +
-  theme(axis.text.x = element_text(size = 6,angle = 45, hjust = 1, vjust = 1))  # Rotate x-axis labels for better visibility
+  theme(axis.text.x = element_text(size = 6,angle = 45, hjust = 1, vjust = 1))
 ```
 
 Most categories have median ratings close to 4.0, suggesting a generally positive rating across the board. The boxes are mostly concentrated in the higher rating range (around 3.5 to 4.5), indicating overall good ratings across various categories. Categories like "Art & Design" and "Books & Reference" show less variability in ratings, as indicated by shorter boxes, meaning that ratings in these categories are more consistent. In contrast, categories like "Business" and "Health & Fitness" show wider boxes, indicating more variability in how users rate apps in these categories.
 Several categories have a significant number of outliers, particularly on the lower side (ratings below 3), such as "Business", "Education", and "Health & Fitness". This could indicate that while many apps in these categories perform well, there are also a considerable number of apps that users are not satisfied with.
 
-```{r}
+```{r, fig.align='center'}
 # Create the box plot
 ggplot(googleplaystore, aes(x = Category, y = log(Installs))) +
-  geom_boxplot(outlier.color = "darkred", outlier.shape = 1,fill = "darkred") +  # Red for outliers
+  geom_boxplot(outlier.color = "darkred", outlier.shape = 1, 
+               fill = "darkred") +  # Red for outliers
   labs(title = "Distribution of Log Installs by Category in Google Play Store",
        x = "Category",
        y = "Log Install") +
   theme_minimal() +
-  theme(axis.text.x = element_text(size = 6,angle = 45, hjust = 1, vjust = 1))  # Rotate x-axis labels for better visibility
+  theme(axis.text.x = element_text(size = 6, angle = 45, hjust = 1, vjust = 1))
 ```
 
 The plot shows a wide range of variability in installations across different categories. Categories like "Games" and "Family" show a broad range of installations, evident from the height of their boxes and whiskers, indicating a diverse set of app popularity within these categories. Most categories have their median log installations around the middle of the box, indicating a balanced distribution of data. However, some categories might show a skewed distribution if the median is closer to the top or bottom. Several categories exhibit numerous outliers, especially on the lower side (lower log install counts). This could indicate specific apps in these categories that are significantly less popular than the majority.
@@ -530,7 +552,7 @@ In the "googleplaystore_user_reviews" dataset, there are already pre-processed f
 
 ```{r echo=FALSE, fig.align='center', fig.height = 9, fig.width=12}
 ##########################################
-# 4. e) Categorical Features
+# 4. e) Sentiment dataset
 ##########################################
 
 # Distribution of Sentiments
