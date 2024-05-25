@@ -61,6 +61,12 @@ library(grid)
 library(gridExtra)
 library(RColorBrewer)
 library(kableExtra)
+library(gamlr)
+library(bestNormalize)
+library(tree)
+library(janitor)
+library(randomForest)
+library(rsample)
 ```
 
 ## 1. Executive Summary
@@ -585,11 +591,192 @@ Finally the subjectivity plot shows that a large right skew for neutral sentimen
 
 \newpage
 ## 5. What factors affect the number of installs an app receives?
-### A. Introduction
+### A. Data Preparation and Initial Investigation
+```{r}
+installs_data <- googleplaystore |> na.omit()
+
+# The data is scraped from August 2018
+installs_data$Days_Since_Update <- as.numeric(as.Date("2018-08-15") - installs_data$Last.Updated)
+
+# Log transform Installs, Size, and Reviews to remove skewness
+installs_data <- installs_data |>
+  mutate(log_Installs = log(installs_data$Installs))
+
+# Create dummy variables using model.matrix
+x <- model.matrix(log_Installs ~ Reviews + Size  + Price + Days_Since_Update + 
+                    Category + Type + Content.Rating + Rating - 1, data = installs_data)
+# Response variable
+y <- installs_data$log_Installs 
+```
+Firstly, we eliminate all the null values. Then, we decided to create a new feature called "Days_Since_Update" as this may be more useful than just a specific date of update, and has the added advantage of being a numeric value. The original data was scraped in August 2018, with the latest update for an app being 8th August 2018. The original dataset had no specific day from which it was scraped, so we decided to use 15th August 2018 as an intermediary value, and calculated the different between this date and the "Last.Updated" to create the new feature. As we mention in the EDA section, we perform log transformation on the Installs variable. We result in a much more normal distribution after transformation.
+```{r}
+ggplot(googleplaystore, aes(x = log(Installs))) +
+  geom_histogram(bins = 30, fill = "darkred") +
+  ggtitle("Distribution of Log Installs")+
+  theme(axis.text.x = element_text(size = 6,angle = 0, hjust = 1, vjust = 0.5)) 
+```
 ### B. Analysis
-#### Model 1.
-#### Model 2.
-#### Model 3.
+#### Lasso
+```{r, include = TRUE, fig.height=4, fig.align='center'}
+library(gamlr)
+set.seed(1024)
+lasso_model <- gamlr(x, y, alpha = 1, nfolds = 100, type.measure = "mse")
+plot(lasso_model)
+```
+```{r}
+# best_lambda <- cv_model$lambda.min  # Lambda that minimizes MSE
+# lasso_model <- glmnet(x, y, alpha = 1, lambda = best_lambda)
+# # Extracting coefficients at the lambda that minimizes the MSE
+# coefficients_lasso <- coef(lasso_model, s = best_lambda)  # returns a matrix
+# # Simplify to vector and remove intercept if present
+# coefficients_lasso <- coefficients_lasso[-1, 1]  # Assuming the intercept is the first entry, adjust if needed
+# 
+# # Find the highest and lowest coefficients
+# highest_coefs <- sort(coefficients_lasso, decreasing = TRUE)[1:5]
+# lowest_coefs <- sort(coefficients_lasso, decreasing = FALSE)[1:5]
+# 
+# # Convert them to data frames
+# highest_df = data.frame(Feature = names(highest_coefs),
+#                         Coefficient = highest_coefs, Impact = "Positive")
+# lowest_df = data.frame(Feature = names(lowest_coefs),
+#                        Coefficient = lowest_coefs, Impact = "Negative")
+# coefficients_df <- rbind(highest_df, lowest_df)
+# 
+# # Ordering the dataframe by coefficient magnitude for clearer interpretation
+# coefficients_df <- coefficients_df[order(abs(coefficients_df$Coefficient), decreasing=TRUE),]
+# library(knitr)
+# library(kableExtra)
+# kable(coefficients_df, caption = "Highest and Lowest Coefficients from LASSO Model",
+#       row.names = FALSE) %>%
+#   kable_styling(bootstrap_options = c("striped", "hover"))
+
+```
+
+
+```{r, include = TRUE}
+# Find the index with lowest AICc
+summary_output = summary(lasso_model)
+best_aicc_index <- which.min(summary_output$aicc)
+
+coefficients_lasso <- lasso_model$beta[, best_aicc_index]
+highest_coefs <- head(sort(coefficients_lasso, decreasing = TRUE), 5)
+lowest_coefs <- head(sort(coefficients_lasso, decreasing = FALSE), 5)
+
+# Convert them to data frames
+highest_df = data.frame(Feature = names(highest_coefs),
+                        Coefficient = highest_coefs, Impact = "Positive")
+lowest_df = data.frame(Feature = names(lowest_coefs),
+                       Coefficient = lowest_coefs, Impact = "Negative")
+coefficients_df <- rbind(highest_df, lowest_df)
+
+# Ordering the dataframe by coefficient magnitude for clearer interpretation
+coefficients_df <- coefficients_df[order(coefficients_df$Coefficient, decreasing=TRUE),]
+kable(coefficients_df,
+      caption = "Highest and Lowest Coefficients from LASSO Model",
+      row.names = FALSE) |>
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+The LASSO model analysis reveals distinct patterns regarding the impact of app categories and monetization strategies on app performance within the Google Play Store. Categories such as Entertainment, Education, Photography, Weather, and Shopping positively influence app performance, indicating high user engagement or downloads, with Entertainment apps showing the highest positive effect.
+
+Conversely, Medical, Events, Business, and Finance apps demonstrate negative impacts, suggesting challenges in user acceptance or market competition, particularly for Medical apps, which show the most significant negative influence.
+
+The model also highlights a strong negative effect associated with paid apps, suggesting a distinct user preference for free apps, likely due to hesitancy to incur upfront costs without guaranteed value.
+
+These insights provide valuable guidance for app developers and marketers, emphasizing the importance of category choice and the critical impact of pricing strategies on market success.
+
+```{r, include = TRUE}
+print(paste("In-sample R^2:", summary_output$r2[best_aicc_index]))
+```
+The value of 0.299 suggests a moderate level of explanatory power. This is neither particularly high nor low but indicates that while the model has captured a significant portion of the available explanatory information, there remains a substantial amount of variability that is not explained by the model. Despite not explaining more than half of the variance, the model could still be useful depending on the context and the complexity of the data. 
+
+
+#### Decision Tree
+```{r, fig.width=10, fig.align='center', fig.height=6}
+clean_column_names <- function(data) {
+    names(data) <- tolower(names(data))
+    names(data) <- gsub("[^[:alnum:]_]", "_", names(data))
+    names(data) <- make.names(names(data), unique = TRUE) 
+    return(data)
+}
+
+x <- clean_column_names(as.data.frame(x))
+tree_model <- tree(y ~ ., data = x, mindev = 0.00001)
+plot(tree_model)
+text(tree_model, pretty = 0)
+```
+
+The decision tree visualization centered on the 'reviews' feature provides insightful details on its significant role in the predictive model. The tree structure displays multiple decision points based on the number of reviews, with initial and deeper splits at various thresholds, such as 1548, 48.5, 845.5, and 78977 reviews. These splits demonstrate that the number of reviews is a critical predictor in the model, influencing the predicted outcomes substantially.
+
+```{r}
+evaluate_tree_model <- function(model, x, y) {
+    predictions <- predict(model, x)
+    SSR <- sum((y - predictions)^2)
+    mean_rating <- mean(y)
+    SST <- sum((y - mean_rating)^2)
+    R_squared <- 1 - (SSR / SST)
+    mse <- mean((y - predictions)^2)
+    cat("In-sample R^2:", R_squared, "\n")
+    cat("Mean Squared Error:", mse, "\n")
+}
+
+evaluate_tree_model(tree_model, x, y)
+```
+
+The results presented from the analysis of a predictive model using a decision tree approach indicate robust performance metrics, with an in-sample R² value of 0.9647982 and a Mean Squared Error (MSE) of 0.4799728. Such a high R² value suggests that the model explains approximately 96.48% of the variance within the training dataset, indicating a very good fit to the data. The low MSE further supports the model's efficacy, highlighting its accuracy in predicting the dependent variable by showing a small average squared difference between the predicted and actual values.
+
+However, despite the promising performance metrics, caution should be exercised regarding potential overfitting.To address this concern, we will perform Cross Validation to prune the tree.
+```{r, fig.align='center'}
+# Cross Validation
+cv_tree_model <- cv.tree(tree_model, K=50)
+
+# Find the last index corresponding to minimum deviance
+tree_index = max(which(cv_tree_model$dev == min(cv_tree_model$dev)))
+
+# Find the tree size
+tree_size = cv_tree_model$size[tree_index]
+
+# Prune the tree
+pruned_tree <- prune.tree(tree_model, best=tree_size)
+plot(pruned_tree)
+text(pruned_tree, pretty = 1)
+```
+The decision tree's structure, which categorizes outputs based on the number of reviews, underscores the critical role of user reviews in influencing the model's predictions. This not only highlights the importance of this feature but also reflects how critical user engagement metrics are in predicting app performance.
+```{r}
+evaluate_tree_model(pruned_tree, x, y)
+```
+The decision tree model exhibits a strong fit, as indicated by an in-sample R² of 0.8981282 from the cross-validation process. This value demonstrates that the model explains approximately 89.81% of the variance in the dependent variable, confirming its effectiveness in capturing the underlying relationships between the predictors and the response variable. However, the Mean Squared Error (MSE) has increased to 1.389012. While this still represents a relatively low error rate, the increase compared to earlier results suggests some variability in predictive accuracy when the model is subjected to different subsets of data. This could be indicative of a slight overfitting to the training data, where the model performs exceptionally well on training data but less consistently on unseen data.
+
+#### Random Forest.
+```{r include=FALSE}
+rf_model <- randomForest(y ~ ., data=x, importance = TRUE, ntree=50)
+importance <- importance(rf_model)  # Get importance
+importance_df <- data.frame(Feature = rownames(importance), Importance = importance[,1])  
+```
+
+```{r, fig.align='center'}
+# Plotting feature importance using ggplot2
+ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_col(fill = "darkred") +
+  labs(title = "Feature Importance in Random Forest Model", x = "Features", y = "Importance") +
+  theme_minimal() +
+  coord_flip()+
+  theme(axis.text.y = element_text(size = 6))  # Flip coordinates for easier reading of feature names
+```
+Similarly with decision tree, the random forest model reveals that the number of reviews is the most significant determinant, indicating that user engagement, as measured by review volume, plays a pivotal role in app success. This suggests that apps with higher review counts likely see greater visibility and popularity, which significantly impacts the model's predictions.
+
+Following reviews, the 'days_since_update' feature stands out as the second most important factor, highlighting the importance of recent updates in app performance. This feature's prominence suggests that apps regularly updated with new features or bug fixes tend to be favored by users, reflecting ongoing development commitment and app reliability.
+
+Other notable features include app size, user ratings, and whether an app is free or paid. These aspects moderately influence app performance, with size and ratings likely affecting user download and retention decisions, and the app's type (paid or free) reflecting user purchasing behavior. Additionally, pricing and specific content ratings like 'everyone' and 'teen' show varying degrees of impact, indicating differences in target demographics and their preferences.
+
+The importance of various app categories such as 'finance', 'medical', 'sports', and 'game' also varies, which may reflect distinct market dynamics, user base sizes, and usage patterns inherent to each category. This differentiation underscores the need for developers to consider category-specific strategies when designing and marketing their apps.
+
+```{r}
+evaluate_tree_model(rf_model, x, y)
+```
+
+
+
 ### C. Conclusion
 
 \newpage
