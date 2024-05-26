@@ -98,6 +98,306 @@ googleplaystore <- googleplaystore_raw |>
 ```
 
 \newpage
+
+## 5. What factors affect the number of installs an app receives?
+
+### A. Data Preparation and Initial Investigation
+```{r}
+installs_data <- googleplaystore |> na.omit()
+
+# The data is scraped from August 2018
+installs_data$Days_Since_Update <- as.numeric(as.Date("2018-08-15") - installs_data$Last.Updated)
+
+# Log transform Installs, Size, and Reviews to remove skewness
+installs_data <- installs_data |>
+  mutate(log_Installs = log(installs_data$Installs))
+
+# Create dummy variables using model.matrix
+x <- model.matrix(log_Installs ~ Reviews + Size  + Price + Days_Since_Update + 
+                    Category + Type + Content.Rating + Rating - 1, data = installs_data)
+# Response variable
+y <- installs_data$log_Installs 
+```
+
+Firstly, we eliminate all the null values. Then, we decided to create a new feature called "Days_Since_Update" as this may be more useful than just a specific date of update, and has the added advantage of being a numeric value. The original data was scraped in August 2018, with the latest update for an app being 8th August 2018. The original dataset had no specific day from which it was scraped, so we decided to use 15th August 2018 as an intermediary value, and calculated the different between this date and the "Last.Updated" to create the new feature. As we mention in the EDA section, we perform log transformation on the Installs variable. We result in a much more normal distribution after transformation.
+
+
+```{r}
+ggplot(googleplaystore, aes(x = log(Installs))) +
+  geom_histogram(bins = 30, fill = "darkred") +
+  ggtitle("Distribution of Log Installs")+
+  theme(axis.text.x = element_text(size = 6,angle = 0, hjust = 1, vjust = 0.5)) 
+```
+
+### B. Analysis
+
+#### Lasso
+
+We start with using Lasso model using dataset we prepare, and select the lambda using AICc. The lasso selected 37 explanatory variables and rejected 7 variables.
+
+```{r, include = TRUE, fig.height=4, fig.align='center'}
+library(gamlr)
+set.seed(1024)
+lasso_model <- gamlr(x, y, alpha = 1, nfolds = 100, type.measure = "mse")
+plot(lasso_model)
+```
+
+```{r, include = TRUE}
+# Find the index with lowest AICc
+summary_output = summary(lasso_model)
+best_aicc_index <- which.min(summary_output$aicc)
+
+coefficients_lasso <- lasso_model$beta[, best_aicc_index]
+highest_coefs <- head(sort(coefficients_lasso, decreasing = TRUE), 5)
+lowest_coefs <- head(sort(coefficients_lasso, decreasing = FALSE), 5)
+
+# Convert them to data frames
+highest_df = data.frame(Feature = names(highest_coefs),
+                        Coefficient = highest_coefs, Impact = "Positive")
+lowest_df = data.frame(Feature = names(lowest_coefs),
+                       Coefficient = lowest_coefs, Impact = "Negative")
+coefficients_df <- rbind(highest_df, lowest_df)
+
+# Ordering the dataframe by coefficient magnitude for clearer interpretation
+coefficients_df <- coefficients_df[order(coefficients_df$Coefficient, decreasing=TRUE),]
+kable(coefficients_df,
+      caption = "Highest and Lowest Coefficients from LASSO Model",
+      row.names = FALSE) |>
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+The LASSO model analysis reveals distinct patterns regarding the impact of app categories and monetization strategies on app performance within the Google Play Store. Categories such as Entertainment, Education, Photography, Weather, and Shopping positively influence app performance, indicating high user engagement or downloads, with Entertainment apps showing the highest positive effect.
+
+Conversely, Medical, Events, Business, and Finance apps demonstrate negative impacts, suggesting challenges in user acceptance or market competition, particularly for Medical apps, which show the most significant negative influence.
+
+The model also highlights a strong negative effect associated with paid apps, suggesting a distinct user preference for free apps, likely due to hesitancy to incur upfront costs without guaranteed value.
+
+These insights provide valuable guidance for app developers and marketers, emphasizing the importance of category choice and the critical impact of pricing strategies on market success.
+
+```{r, include = TRUE}
+print(paste("In-sample R^2:", summary_output$r2[best_aicc_index]))
+```
+
+The value of 0.299 suggests a moderate level of explanatory power. This is neither particularly high nor low but indicates that while the model has captured a significant portion of the available explanatory information, there remains a substantial amount of variability that is not explained by the model. Despite not explaining more than half of the variance, the model could still be useful depending on the context and the complexity of the data. 
+
+#### Decision Tree
+
+Next, we tried a decision tree model to predict log installs, setting the initial minimum node size to 1 and a minimum deviance requirement of 0.00001 to proceed with a new split.
+
+```{r, fig.width=10, fig.align='center', fig.height=6}
+clean_column_names <- function(data) {
+    names(data) <- tolower(names(data))
+    names(data) <- gsub("[^[:alnum:]_]", "_", names(data))
+    names(data) <- make.names(names(data), unique = TRUE) 
+    return(data)
+}
+
+x <- clean_column_names(as.data.frame(x))
+
+set.seed(1234)
+tree_model <- tree(y ~ ., data = x, mincut = 1, mindev = 0.00001)
+#plot(tree_model)
+#text(tree_model, pretty = 0)
+```
+
+```{r}
+evaluate_tree_model <- function(model, x, y) {
+    predictions <- predict(model, x)
+    SSR <- sum((y - predictions)^2)
+    mean_rating <- mean(y)
+    SST <- sum((y - mean_rating)^2)
+    R_squared <- 1 - (SSR / SST)
+    mse <- mean((y - predictions)^2)
+    cat("In-sample R^2:", R_squared, "\n")
+    cat("Mean Squared Error:", mse, "\n")
+}
+
+evaluate_tree_model(tree_model, x, y)
+```
+
+
+The in-sample R² value of 0.9793926 and a Mean Squared Error (MSE) of 0.2809792  demonstrate strong performance of the model. An R² value close to 1, such as 0.9793926, indicates that the model explains approximately 97.9% of the variance within the training dataset, which points to a very good fit. Similarly, the low MSE corroborates the model's effectiveness, as it signifies a minimal average squared difference between the predicted and actual values, enhancing confidence in the model's predictive accuracy. However, the combination of a high R² value and the complex structure of our tree model could lead to concerns about overfitting, where the model might be too closely fitted to the nuances of the training data, potentially limiting its generalizability to new data. Additionally, the structure of the decision tree makes it difficult to interpret, which could obscure meaningful insights from the model. To mitigate these issues and enhance the model's robustness, 50-fold Cross Validation will be performed to appropriately prune the tree, aiming to simplify the model and improve its interpretive ease without sacrificing accuracy.
+
+```{r, fig.align='center', fig.width=10}
+# Cross Validation
+cv_tree_model <- cv.tree(tree_model, K=50)
+
+# Find the last index corresponding to minimum deviance
+tree_index = max(which(cv_tree_model$dev == min(cv_tree_model$dev)))
+
+# Find the tree size
+tree_size = cv_tree_model$size[tree_index]
+
+# Prune the tree
+pruned_tree <- prune.tree(tree_model, best=tree_size)
+plot(pruned_tree)
+text(pruned_tree, pretty = 1)
+```
+
+The decision tree's structure, which categorizes outputs based on the number of reviews, underscores the critical role of user reviews in influencing the model's predictions. This not only highlights the importance of this feature but also reflects how critical user engagement metrics are in predicting app performance.
+
+```{r}
+evaluate_tree_model(pruned_tree, x, y)
+```
+
+
+The pruned decision tree model exhibits a strong fit, as indicated by an in-sample R² of 0.8981282 from the cross-validation process. This value demonstrates that the model explains approximately 89.81% of the variance in the dependent variable, confirming its effectiveness in capturing the underlying relationships between the predictors and the response variable. However, the Mean Squared Error (MSE) has increased to 1.389012. While this still represents a relatively low error rate, the increase compared to earlier results suggests some variability in predictive accuracy when the model is subjected to different subsets of data. This could be indicative of a slight overfitting to the training data, where the model performs exceptionally well on training data but less consistently on unseen data.
+
+
+#### Random Forest
+
+While the tree model is useful for interpretation, it can be improved upon when it comes
+to prediction with a random forest. A 50 tree forest yields the following important factors:
+
+```{r include=FALSE}
+set.seed(5678)
+rf_model <- randomForest(y ~ ., data=x, importance = TRUE, ntree=50)
+save(rf_model, file = "model_data/installs_rf_model.RData")
+
+importance <- importance(rf_model)  # Get importance
+importance_df <- data.frame(Feature = rownames(importance), Importance = importance[,1])  
+```
+
+```{r, fig.align='center'}
+ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_col(fill = "darkred") +
+  labs(title = "Feature Importance in Random Forest Model", x = "Features", y = "Importance") +
+  theme_minimal() +
+  coord_flip()+
+  theme(axis.text.y = element_text(size = 6))  # Flip coordinates for easier reading of feature names
+```
+
+Similarly with decision tree, the random forest model reveals that the number of reviews is the most significant determinant, indicating that user engagement, as measured by review volume, plays a pivotal role in app success. This suggests that apps with higher review counts likely see greater visibility and popularity, which significantly impacts the model's predictions.
+
+Following reviews, the 'days_since_update' feature stands out as the second most important factor, highlighting the importance of recent updates in app performance. This feature's prominence suggests that apps regularly updated with new features or bug fixes tend to be favored by users, reflecting ongoing development commitment and app reliability.
+
+Other notable features include app size, user ratings, and whether an app is free or paid. These aspects moderately influence app performance, with size and ratings likely affecting user download and retention decisions, and the app's type (paid or free) reflecting user purchasing behavior. Additionally, pricing and specific content ratings like 'everyone' and 'teen' show varying degrees of impact, indicating differences in target demographics and their preferences.
+
+The importance of various app categories such as 'finance', 'medical', 'sports', and 'game' also varies, which may reflect distinct market dynamics, user base sizes, and usage patterns inherent to each category. This differentiation underscores the need for developers to consider category-specific strategies when designing and marketing their apps.
+
+```{r}
+evaluate_tree_model(rf_model, x, y)
+```
+
+The results for the Random Forest model, featuring an in-sample R² value of 0.9829158 and a Mean Squared Error (MSE) of 0.2329418, illustrate its high predictive performance and accuracy. 
+
+
+### C. Conclusion
+```{r}
+##########################################
+# 6. C. Comparison and Conclusion
+##########################################
+# Function to compute out of sample R2 for given models
+compute_OOS_R2 <- function(model, test_x, test_y) {
+    # Predict ratings using the model
+    predictions <- predict(model, test_x)
+    
+    # Calculate SSR (Sum of Squares of Residuals)
+    SSR <- sum((test_y - predictions)^2)
+    
+    # Calculate SST (Total Sum of Squares)
+    mean_rating <- mean(test_y)
+    SST <- sum((test_y - mean_rating)^2)
+    
+    # Compute R^2
+    R_squared <- 1 - (SSR / SST)
+    
+    return (R_squared)
+}
+
+# Function to return a trained tree model
+get_tree_model <- function(train_x, train_y) {
+    # Intial Tree
+    tree_model <- tree(y ~ ., data=x, mindev=0.00001)
+    
+    # Cross Validation
+    cv_tree_model <- cv.tree(tree_model, K=50)
+    
+    # Find the last index corresponding to minimum deviance
+    tree_index = max(which(cv_tree_model$dev == min(cv_tree_model$dev)))
+    
+    # Find the tree size
+    tree_size = cv_tree_model$size[tree_index]
+    
+    # Prune the tree
+    pruned_tree <- prune.tree(tree_model, best=tree_size)
+    
+    return(pruned_tree)
+}
+```
+
+```{r eval=TRUE, include=FALSE}
+set.seed(2048)
+
+# Initialize a data frame to store R-squared results
+results_df <- data.frame(iteration = integer(),
+                         R2_LASSO = numeric(),
+                         R2_Tree = numeric(),
+                         R2_rf = numeric())
+
+
+# Loop for 20 iterations
+for (i in 1:20) {
+    # Progress Counter
+    print(paste("Iteration: ", i, "/20"))
+
+    # Randomly split data into training and testing sets
+    n <- length(y)
+    split <- sample(c(TRUE, FALSE), n, replace = TRUE, prob = c(0.8, 0.2))
+    x_train <- x[split, ]
+    x_test <- x[!split, ]
+    y_train <- y[split]
+    y_test <- y[!split]
+
+    # Fit models on the training data
+    print("Training LASSO")
+    model_lasso <- gamlr(x_train, y_train, lambda.min.ratio=1e-3)
+    print("Training Tree")
+    model_tree <- get_tree_model(x_train, y_train)
+    print("Training Random Forest")
+    model_rf <- randomForest(y_train ~ ., data=x_train, ntree=50)
+
+    # Compute out-of-sample R2 for each model
+    R2_LASSO <- compute_OOS_R2(model_lasso, x_test, y_test)
+    R2_Tree <- compute_OOS_R2(model_tree, x_test, y_test)
+    R2_rf <- compute_OOS_R2(model_rf, x_test, y_test)
+
+    # Store the results in the dataframe
+    results_df <- rbind(results_df,
+                        data.frame(iteration = i,
+                                   R2_LASSO = R2_LASSO,
+                                   R2_Tree = R2_Tree,
+                                   R2_rf = R2_rf))
+}
+```
+
+```{r}
+save(results_df, file = "model_data/installs_results_df.RData")
+```
+
+```{r, fig.align="center"}
+# Plot the results
+results_long <- pivot_longer(results_df,
+                             cols = c(R2_LASSO, R2_Tree, R2_rf),
+                             names_to = "Model",
+                             values_to = "R2")
+results_long$Model <- factor(results_long$Model, levels = c("R2_LASSO", "R2_Tree", "R2_rf"))
+
+
+# Create a boxplot to compare the R2 scores for each model
+ggplot(results_long, aes(x = Model, y = R2, fill = Model)) +
+    geom_boxplot(fill = "darkred") +
+    labs(title = "Comparison of Out-of-Sample R^2 Across Models",
+         x = "Model",
+         y = "Out-of-Sample R^2") +
+    theme_minimal() +
+    scale_x_discrete(labels = c("LASSO", "Pruned Tree", "Random Forest"))
+```
+
+
+[TO DO]
+
+\newpage
 ## 6. What are the key features that influence an app's rating?
 App developers and key stakeholders often have an app's rating as an objective as this influences public perception of the app as well as attracting possible new users. So we decided to investigate our ability to predict an app's rating.
 
