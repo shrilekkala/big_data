@@ -1,0 +1,1040 @@
+---
+title: |
+    | \includegraphics[width=16cm]{files/booth_logo.jpg} 
+    |
+    | BUSN 41201 - Big Data - Final Project
+    |
+    |
+    | \LARGE \textbf{PROJECT TITLE}
+subtitle: |
+    |
+    |
+    | 
+    | **26 May 2024**
+    | **Yi Cao, Shri Lekkala, Ningxin Zhang **
+output:
+  html_document:
+    toc: no
+  pdf_document: 
+    toc: no
+    latex_engine: xelatex  # Specify XeLaTeX as the engine
+    includes:
+      in_header: files/header.tex
+indent: true
+header-includes:
+    - \usepackage{setspace}\doublespacing
+    - \setlength{\parskip}{0.35cm plus2mm minus1mm}
+    - \AtBeginEnvironment{Shaded}{\singlespace}
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+\newpage
+
+```{=latex}
+\setcounter{tocdepth}{4}
+\begin{spacing}{1.5}
+{\parskip=0pt
+\tableofcontents}
+\end{spacing}
+```
+Note: The full the code used in all the questions can be found in the appendix.
+
+\newpage
+
+```{r setup, include=FALSE}
+##########################################
+# Setup
+##########################################
+
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.height = 4,
+	fig.width = 6,
+	warning = FALSE,
+	cache = TRUE,
+	digits = 3,
+	width = 48
+)
+ 
+# Required Packages
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(grid)
+library(gridExtra)
+library(RColorBrewer)
+library(kableExtra)
+
+```
+
+## 1. Executive Summary
+
+[REDO AFTER WE COMPLETE THE REPORT]
+
+In this report, we present a comprehensive analysis of the "Google Play Store dataset" to gain insights into the characteristics and success factors of mobile applications.
+By examining various aspects related to app details, including categories, ratings, reviews, sizes, installations, and pricing, we aim to identify patterns and trends that contribute to an app's success on the Google Play Store.
+
+We begin by exploring the general statistics of apps, focusing on the distribution of app categories, ratings, and reviews.
+This provides a foundational understanding of the data and highlights key areas of interest.
+Next, we delve into specific analyses to understand the relationship between app size, installs, and pricing, exploring how these factors influence an app's popularity and user engagement.
+
+Our study also includes a sentiment analysis of user reviews, examining the polarity and subjectivity of feedback to understand how user sentiments correlate with app ratings and success.
+Additionally, we develop predictive models to forecast app ratings based on various features, and we investigate potential causal relationships between app characteristics and their performance metrics.
+
+By leveraging data visualization, feature engineering, and predictive modeling techniques, we aim to provide actionable insights for potential app developers.
+These insights can help optimize app features, improve user satisfaction, and ultimately enhance the app's visibility and success on the Google Play Store.
+
+\newpage
+
+## 2. Introduction
+
+[WE CAN CHANGE THE QUESTIONS, THESE ARE JUST EXAMPLES]
+
+In this paper, we aim to analyze the Google Play Store dataset to gain a comprehensive understanding of the factors that contribute to the success of mobile applications.
+The dataset includes details of apps such as categories, ratings, reviews, sizes, installations, and pricing, as well as user reviews with sentiment analysis.
+Our objective is to uncover patterns and trends that can help app developers optimize their offerings and improve user satisfaction.
+
+The Google Play Store dataset, available on Kaggle, consists of two files: `googleplaystore.csv`, which contains detailed information about the apps, and `googleplaystore_user_reviews.csv`, which includes user reviews and sentiment data.
+
+Our analysis will focus on the following research questions:
+
+-   **What factors affect the number of installs an app receives?** Specifically, what is the relationship between app size, type (free or paid), price, and the number of installs?
+
+-   **What are the key features that influence an app's rating?** How do factors like category, price, and number of reviews contribute to the overall rating of an app?
+
+-   **How does user sentiment in reviews correlate with app ratings?**\
+    Can sentiment analysis of user reviews provide additional insights into user satisfaction and app performance?
+
+We will begin by loading and cleaning the dataset, followed by a thorough exploratory data analysis to uncover initial insights.
+Subsequently, we will perform detailed analyses to address our research questions, culminating in the development of predictive models and the identification of causal relationships.
+We will end by making concluding remarks from our research.
+
+\newpage
+
+## 3. Dataset
+
+### a) Understanding the data
+
+```{r include=FALSE}
+##########################################
+# 3. a) Understanding the datasets
+##########################################
+# Load the datasets
+googleplaystore_raw <- read.csv("googleplaystore.csv")
+googleplaystore_user_reviews_raw <- read.csv("googleplaystore_user_reviews.csv")
+
+# Check the column names
+colnames(googleplaystore_raw)
+colnames(googleplaystore_user_reviews_raw)
+
+# Check the dimensions
+dim(googleplaystore_raw)
+dim(googleplaystore_user_reviews_raw)
+```
+
+For `googleplaystore.csv` there are the following columns:\
+- App: Application Name\
+- Category: Category Type (e.g. Family, Game, Art)\
+- Rating: User rating review\
+- Reviews: Number of reviews\
+- Size: Download size of application\
+- Installs: Number of user downloads 0..
+- Type: Paid or Free\
+- Price: Price of App\
+- Content.Rating: Age group that app is targeted at (E.g. Everyone, Teen, Child)\
+- Genres: Other categories the app belongs to, other than the main category\
+- Last.Updated: Date when app was last updated\
+- Current.Ver: Current app version available\
+- Android.Ver: Minimum required Android version for app\
+There are a total of 10841 rows (applications).
+
+For `googleplaystore_user_reviews.csv` there are the following columns:\
+- App: Application Name\
+- Translated_Review: User review, translated to English\
+- Sentiment: Positive / Negative / Neutral (Preprocessed)\
+- Sentiment_Polarity: Sentiment polarity score (Preprocessed)\
+- Sentiment_Subjectivity: Sentiment subjectivity score (Preprocessed)
+
+This dataset contains the first 100 'most relevant' review for each app, with some prepocessing already done to add the last 3 features.\
+There are a total of 64295 rows (reviews).
+
+### b) Data Cleaning
+
+```{r include=FALSE}
+##########################################
+# 3. b) Data Cleaning
+##########################################
+
+# Convert the variables to the appropriate data type
+googleplaystore <- googleplaystore_raw |>
+  mutate(
+    # Transform Installs and size to numeric
+    Installs = gsub("\\+", "", as.character(Installs)),
+    Installs = as.numeric(gsub(",", "", Installs)),
+    Size = gsub("M", "", Size),
+    # Convert apps with size < 1MB to 0, and transform to numeric
+    Size = ifelse(grepl("k", Size), 0, as.numeric(Size)),
+    # Transform reviews to numeric
+    Reviews = as.numeric(Reviews),
+    # Change currency numeric
+    Price = as.numeric(gsub("\\$", "", as.character(Price))),
+    # Convert Last.Updated to date
+    Last.Updated = mdy(Last.Updated),
+    # Change version number to 1 decimal, and add NAs where appropriate
+    Android.Ver = gsub("Varies with device", NaN, Android.Ver),
+    Android.Ver = as.numeric(substr(Android.Ver, start = 1, stop = 3)),
+    Current.Ver = gsub("Varies with device", NaN, Current.Ver),
+    Current.Ver = as.numeric(substr(Current.Ver, start = 1, stop = 3)),
+  ) |>
+  # Remove apps with Type 0 or NA
+  filter(Type %in% c("Free", "Paid")) |>
+  # Convert Category, Type, Content.Rating and Genres to factors
+  mutate(
+    App = as.factor(App),
+    Category = as.factor(Category),
+    Type = as.factor(Type),
+    Content.Rating = as.factor(Content.Rating),
+    Genres = as.factor(Genres)
+  ) |>
+  # Remove duplicate rows
+  distinct()
+
+```
+
+For the `googleplaystore` dataset, we first process the variables by converting columns to the appropriate datatype.
+For example Installs, Size, Reviews Price, and Android.Ver are converted to numerics, Last.Updated is converted to date.
+Then we filter out apps with Type 0 or NA, and remove duplicated rows.\
+After this, we are left with 10356 rows.
+
+```{r include=FALSE}
+# Remove all rows with nans
+googleplaystore_user_reviews <- googleplaystore_user_reviews_raw |>
+  filter(Translated_Review != "nan") |>
+  # Convert Sentiment to factor
+  mutate(Sentiment = as.factor(Sentiment))
+```
+
+With the `googleplaystore_user_reviews` dataset, the variables were already well structured, but we noticed there were many rows with "nan"s.
+After filtering these out, we were left with 37432 rows.
+
+\newpage
+
+## 4. Exploratory Analysis
+
+### a) Numerical Features
+
+```{r include=FALSE}
+##########################################
+# 4. a) Overall Histogram Overview
+##########################################
+common_theme <- theme(
+  axis.ticks.x = element_blank(), # Optional: Remove x-axis ticks if not needed
+  axis.title.x = element_blank(), # Removes x-axis title for cleaner look
+  axis.text.y = element_text(size = 6), # Y-axis text size for uniformity
+  axis.title.y = element_blank(), # Removes x-axis title for cleaner look
+)
+
+# Determine the top 10 values for categorical data
+top_categories <- googleplaystore %>%
+  count(Category) %>%
+  top_n(10) %>%
+  pull(Category)
+
+filtered_google <- googleplaystore %>%
+  filter(Category %in% top_categories) %>%
+    mutate(Category = factor(Category, levels = names(sort(table(Category), decreasing = TRUE))))
+
+p1 <- ggplot(filtered_google, aes(x = Category)) +
+  geom_bar(fill = "darkred") +
+  ggtitle("Top 10 of 33 Categories")+
+  theme(axis.text.x = element_text(size = 8,angle = 45, hjust = 1)) + 
+  common_theme
+#########
+p2 <- ggplot(googleplaystore, aes(x = Rating)) +
+  geom_histogram(bins = 30, fill = "darkred") +
+  ggtitle("Rating")+common_theme
+#########
+p3 <- ggplot(googleplaystore, aes(x = Reviews)) +
+  geom_histogram(bins = 30, fill = "darkred") +
+  ggtitle("Reviews")+
+  theme(axis.text.x = element_text(size = 6,angle = 0, hjust = 1, vjust = 0.5)) + 
+  common_theme
+#########
+p4 <- ggplot(googleplaystore, aes(x = Size)) +
+  geom_histogram(bins = 30, fill = "darkred") +
+  ggtitle("Size")+common_theme
+#########
+p5 <- ggplot(googleplaystore, aes(x = Installs)) +
+  geom_histogram(bins = 30, fill = "darkred") +
+  ggtitle("Installs")+
+  theme(axis.text.x = element_text(size = 6,angle = 0, hjust = 1, vjust = 0.5)) + 
+  common_theme
+#########
+p6 <- ggplot(filtered_google, aes(x = Type)) +
+  geom_bar(fill = "darkred") +
+  ggtitle("Type")+common_theme
+#########
+p7 <- ggplot(googleplaystore, aes(x = Price)) +
+  geom_histogram(bins = 30, fill = "darkred") +
+  ggtitle("Price")+common_theme
+#########
+filtered_google <- googleplaystore %>%
+    mutate(Content.Rating = factor(Content.Rating,
+                                   levels = names(sort(table(Content.Rating),
+                                                       decreasing = TRUE))))
+p8 <- ggplot(filtered_google, aes(x = Content.Rating)) +
+  geom_bar(fill = "darkred") +
+  ggtitle("Content Rating")+
+  theme(axis.text.x = element_text(size = 10,angle = 45, hjust = 1)) + 
+  common_theme
+#########
+top_genres <- googleplaystore %>%
+  count(Genres) %>%
+  top_n(10) %>%
+  pull(Genres)
+filtered_google <- googleplaystore %>%
+  filter(Genres %in% top_genres) %>%
+  mutate(Genres = factor(Genres, levels = names(sort(table(Genres), decreasing = TRUE))))
+p9 <- ggplot(filtered_google, aes(x = Genres)) +
+  geom_bar(fill = "darkred") +
+  ggtitle("Top 10 of 119 Genres") +
+  theme(axis.text.x = element_text(size = 10,angle = 45, hjust = 1))+common_theme
+#########
+p10 <- ggplot(googleplaystore, aes(x = Last.Updated)) +
+  geom_histogram(bins = 30, fill = "darkred") +
+  ggtitle("Last Updated Date")+common_theme
+#########
+# top_CurrentVer <- googleplaystore %>%
+#   count(Current.Ver) %>%
+#   top_n(10) %>%
+#   pull(Current.Ver)
+# filtered_google <- googleplaystore %>%
+#   filter(Current.Ver %in% top_CurrentVer) %>%
+  # mutate(Current.Ver = factor(Current.Ver,
+  #                             levels = names(sort(table(Current.Ver), decreasing = TRUE))))
+p11 <- ggplot(filtered_google, aes(x = Current.Ver)) +
+  geom_histogram(fill = "darkred") +
+  ggtitle("Current Version") +common_theme
+#########
+# top_AndroidVer <- googleplaystore %>%
+#   count(Android.Ver) %>%
+#   top_n(10) %>%
+#   pull(Android.Ver)
+# filtered_google <- googleplaystore %>%
+#   filter(Android.Ver %in% top_AndroidVer) %>%
+  # mutate(Android.Ver = factor(Android.Ver,
+  #                             levels = names(sort(table(Android.Ver), decreasing = TRUE))))
+p12 <- ggplot(filtered_google, aes(x = Android.Ver)) +
+  geom_histogram(fill = "darkred") +
+  ggtitle("Minimum Android Version")+common_theme
+```
+
+```{r Echo = TRUE, fig.width=12, fig.height=9}
+grid.arrange(p2, p7, p4, p3, p5, p10, p11, p12,
+             nrow = 2, ncol = 4, heights = rep(1, 2), widths = rep(1, 4))
+```
+
+According to the histograms, most apps have high ratings, peaking around 4 to 5, with fewer apps rated below 3, indicating generally positive user feedback.
+The majority of apps have a low number of installs, while a few apps have extremely high install numbers, showing a highly skewed distribution.
+Since installs are highly skewed, we will perform a log transformation on it in later analysis.
+
+Regarding other numerical variables, the vast majority of apps are free, with the few paid apps showing a wide price range, including some very expensive ones.
+Most apps are small in size, with a significant drop-off as size increases.
+The majority are less than 25 MB, with very few exceeding 100 MB.
+Similarly, most apps have a low number of reviews, with a small number having extremely high reviews, indicating a skewed distribution where a few apps are very popular while many are not widely reviewed.
+Most apps have been updated recently, with a notable increase in updates around 2018, suggesting the dataset is current and apps are actively maintained.
+Most apps are on version 1 or 2, with a sharp decrease in the number of apps as the version number increases, indicating that many apps do not undergo numerous versions.
+
+Most apps require Android version 4 or 4.5, with fewer requiring higher versions, suggesting developers aim for compatibility with older Android versions to reach a wider audience.
+However, the data for these version variables is not clean and contains extreme outliers even after cleaning, making it difficult to interpret.
+Therefore, we might exclude these variables from later analysis.
+
+### b) Correlation Matrix
+
+```{r}
+##########################################
+# 4. b) Correlation Matrix
+##########################################
+# google_cleaned <- googleplaystore %>%
+#   select(Rating, Reviews, Size, Installs, Price)
+# 
+# # Calculate correlation matrix
+# cor_matrix <- cor(google_cleaned, use = "complete.obs")  # using complete observations
+# 
+# # Plot the correlation matrix
+# corrplot(cor_matrix, method = "color", col = colorRampPalette(c("white", "darkred"))(200),
+#          type = "upper", order = "hclust",
+#          addCoef.col = "black", # Adding correlation coefficients
+#          tl.col = "black", tl.srt = 45, # Text label color and rotation
+#          diag = FALSE) # Remove diagonal
+```
+
+We begin by analysing the correlation matrix of all the numeric variables for googleplaystore:
+
+```{r echo=FALSE, fig.align='center'}
+##########################################
+# 4. b) Correlation Matrix
+##########################################
+# Select only the numeric columns for the correlation matrix
+numeric_columns <- googleplaystore[, sapply(googleplaystore, is.numeric)]
+
+# Compute the correlation matrix
+cor_matrix <- cor(numeric_columns, use = "complete.obs")
+
+# Visualize the correlation matrix using a heatmap
+corrplot(cor_matrix, method = "color", type = "upper", 
+         col = colorRampPalette(c("white", "darkred"))(200),
+         tl.col = "black", tl.srt = 45, 
+         addCoef.col = "black", number.cex = 0.7,tl.cex = 0.7,
+         title = "Correlation Matrix of Google Play Store Data",
+         mar = c(0, 0, 1, 0))
+```
+
+This seems surprising initially as the variables appear to be fairly uncorrelated with eachother, except for the fact that "Installs" and "Reviews" which are highly correlated with a score of 0.64, which would make sense as one would expect a more popular app with a greater number of installs to also have a higher number of reviews.
+One surprising variable that is somewhat positively correlated with others is "Size", with small positive correlations with "Reviews" and "Installs".
+This might perhaps be due to the fact with apps with a larger download size are more 'complicated' and may perform more functions, and thus lead to a greater number of installations and thus reviews too.
+
+### c) Categorical Features
+
+We also look at the distribution of the categorical features in our dataset:
+
+```{r echo=FALSE, fig.align='center'}
+##########################################
+# 4. c) Categorical Features
+##########################################
+# Distribution of Types (Free vs. Paid)
+p1 <- ggplot(googleplaystore, aes(x = Type, fill = Type)) +
+  geom_bar(fill = "darkred") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of App Types", x = "Type", y = "Count") +
+  theme(legend.position = "none")
+
+# Distribution of Content Ratings
+filtered_google <- googleplaystore %>%
+    mutate(Content.Rating = factor(Content.Rating,
+                                   levels = names(sort(table(Content.Rating), decreasing = TRUE))))
+p2 <- ggplot(filtered_google, aes(x = `Content.Rating`, fill = `Content.Rating`)) +
+  geom_bar(fill = "darkred") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of Content Ratings", x = "Content Rating", y = "Count") +
+  theme(legend.position = "none")
+
+# Arrange the plots in a grid
+grid.arrange(p1, p2, ncol = 2)
+```
+
+So immediately we observe that there is a much greater proportion of free apps than paid, this aligns with the common "freemium" model where apps are free to download but may offer in-app purchases.
+This model also lowers the barrier to entry to users.
+
+The content rating distribution shows that the the significant majority of apps are aimed at is "Everyone".
+This indicates that most apps are designed to be accessible for a general audience, which makes sense if developers want the largest possible user base for their app.
+
+```{r echo=FALSE, fig.align='center'}
+# Count the number of apps in each category
+category_counts <- googleplaystore |>
+  count(Category) |>
+  arrange(desc(n))
+
+# Convert Category to a factor with levels ordered by count
+category_counts$Category <- factor(category_counts$Category,
+                                   levels = category_counts$Category)
+
+# Plot the distribution of app categories sorted by count
+p3 = ggplot(category_counts, aes(x = n, y = Category, fill = Category)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 7)) +
+  labs(title = "Distribution of App Categories", x = "Count", y = "Category") +
+  theme(legend.position = "none") +
+  scale_fill_manual(values = colorRampPalette(brewer.pal(8, "Set2"))(nrow(category_counts))) +
+  theme(panel.grid.minor = element_blank()) +
+  coord_flip()
+
+# Count the number of apps in each genre
+genre_counts <- googleplaystore |>
+  count(Genres) |>
+  arrange(desc(n))
+
+# Convert Genres to a factor with levels ordered by count
+genre_counts$Genres <- factor(genre_counts$Genres, levels = genre_counts$Genres)
+
+# Plot the distribution of app genres sorted by count
+p4 = ggplot(genre_counts, aes(x = n, y = Genres, fill = Genres)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of App Genres", x = "Count", y = "Genres") +
+  theme(legend.position = "none") +
+  scale_fill_manual(values = colorRampPalette(brewer.pal(8, "Set2"))(nrow(genre_counts))) +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        axis.text.x = element_blank()) +
+  coord_flip()
+
+p3
+p4
+```
+
+Next, looking at the distribution of category, sorted by count, we see that distribution is very heavily skewed to the right.
+In particular the first 3 categories (Family, Game, and Tools) have a very large number of apps, after which the count per category drops and falls slowly for the remaining categories.
+
+Secondly, from the genre distribution (recalling that genres are additional categories that apps can be listed as), we observe the same skewness.
+However the top 30-40% of genres contain most of the count, whereas afterwards the genres listed have a count of almost 0 which suggests that there are many genres with very few apps, suggesting either niche markets or less popular app types.
+
+```{r}
+# Combine the dataframes
+combined_df <- data.frame(
+  Rank = 1:10,
+  Category = category_counts[1:10,]$Category,
+  Category_Count = category_counts[1:10,]$n,
+  Genre = genre_counts[1:10,]$Genres,
+  Genre_Count = genre_counts[1:10,]$n
+)
+
+# Print the combined dataframe using kable
+kable(combined_df, caption = "Top 10 Genres and Categories", align = 'c') %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+### d) Exploring Categorical Features vs Y
+
+```{r, fig.align='center'}
+##########################################
+# 4. d) Categorical Features
+##########################################
+# Create the box plot
+b1<-ggplot(googleplaystore, aes(x = Type, y = Rating)) +
+  geom_boxplot(outlier.color = "darkred", outlier.shape = 1 
+               ,fill = "darkred") +  # Red for outliers
+  labs(title = "Rating by Type",
+       x = "Type",
+       y = "Rating") +
+  theme_minimal() 
+
+b2<-ggplot(googleplaystore, aes(x = Type, y = log(Installs))) +
+  geom_boxplot(outlier.color = "darkred", outlier.shape = 1, 
+               fill = "darkred") +  # Red for outliers
+  labs(title = "Log Installs by Type",
+       x = "Type",
+       y = "Log Install") +
+  theme_minimal() 
+
+grid.arrange(b1, b2, ncol = 2)
+```
+
+The rating of free Apps display a broad range of ratings from 1 to 5, with most ratings clustered around 4.
+There are many outliers on the lower end, suggesting some free apps are rated poorly.
+Similar to free apps, ratings mainly cluster around 4.
+However, there are fewer lower outliers compared to free apps, indicating generally higher satisfaction among users who purchase apps.
+Both free and paid apps have a median rating close to 4, showing that overall user satisfaction is high across both app types.
+The presence of more lower outliers in free apps might indicate variability in quality, where some free apps may not meet user expectations, perhaps due to ads or less functionality.
+
+The rating of free Apps have a broader distribution of log installs, with the median around 15.
+The range of installs is wide, showing that some free apps achieve significantly higher installs.
+The distribution of installs is noticeably more constrained and lower than that of free apps.
+The median log install is lower, and the range (IQR) is narrower, indicating less variation in the number of installs.
+Thus, free apps tend to reach more users, reflected by the higher median installs and wider distribution.
+This is expected as the barrier to try a free app is lower than for a paid app.
+Paid apps, while having fewer installs, tend to have a more consistent range of installs.
+This could suggest a dedicated user base willing to pay for apps that potentially offer higher quality or unique features not found in free apps.
+
+```{r, fig.align='center'}
+b1<-ggplot(googleplaystore, aes(x = Content.Rating, y = Rating)) +
+  geom_boxplot(outlier.color = "darkred", outlier.shape = 1, 
+               fill = "darkred") +  # Red for outliers
+  labs(title = "Rating by Content Rating",
+       x = "Content Rating",
+       y = "Rating") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 6,angle = 45, hjust = 1, vjust = 1))
+
+b2<-ggplot(googleplaystore, aes(x = Content.Rating, y = log(Installs))) +
+  geom_boxplot(outlier.color = "darkred", outlier.shape = 1, 
+               fill = "darkred") +  # Red for outliers
+  labs(title = "Log Installs by Content Rating",
+       x = "Content Rating",
+       y = "Log Install") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 6,angle = 45, hjust = 1, vjust = 1))
+
+grid.arrange(b1, b2, ncol = 2)
+```
+
+Content ratings such as "Everyone" and "Teen" cover a broad audience, resulting in higher downloads.
+Categories with restricted audiences like "Adults Only 18+" have both fewer downloads and lower ratings, possibly due to content restrictions or niche market appeal.
+Thus, Apps aimed at a general audience ("Everyone") might expect higher installations and generally favorable ratings, whereas apps targeted at adults or mature audiences might face more challenges in both downloads and user acceptance.
+
+```{r, fig.align='center'}
+# Create the box plot
+ggplot(googleplaystore, aes(x = Category, y = Rating)) +
+  geom_boxplot(outlier.color = "darkred", outlier.shape = 1, 
+               fill = "darkred") +  # Red for outliers
+  labs(title = "Distribution of Ratings by Category in Google Play Store",
+       x = "Category",
+       y = "Rating") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 6,angle = 45, hjust = 1, vjust = 1))
+```
+
+Most categories have median ratings close to 4.0, suggesting a generally positive rating across the board.
+The boxes are mostly concentrated in the higher rating range (around 3.5 to 4.5), indicating overall good ratings across various categories.
+Categories like "Art & Design" and "Books & Reference" show less variability in ratings, as indicated by shorter boxes, meaning that ratings in these categories are more consistent.
+In contrast, categories like "Business" and "Health & Fitness" show wider boxes, indicating more variability in how users rate apps in these categories.
+Several categories have a significant number of outliers, particularly on the lower side (ratings below 3), such as "Business", "Education", and "Health & Fitness".
+This could indicate that while many apps in these categories perform well, there are also a considerable number of apps that users are not satisfied with.
+
+```{r, fig.align='center'}
+# Create the box plot
+ggplot(googleplaystore, aes(x = Category, y = log(Installs))) +
+  geom_boxplot(outlier.color = "darkred", outlier.shape = 1, 
+               fill = "darkred") +  # Red for outliers
+  labs(title = "Distribution of Log Installs by Category in Google Play Store",
+       x = "Category",
+       y = "Log Install") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 6, angle = 45, hjust = 1, vjust = 1))
+```
+
+The plot shows a wide range of variability in installations across different categories.
+Categories like "Games" and "Family" show a broad range of installations, evident from the height of their boxes and whiskers, indicating a diverse set of app popularity within these categories.
+Most categories have their median log installations around the middle of the box, indicating a balanced distribution of data.
+However, some categories might show a skewed distribution if the median is closer to the top or bottom.
+Several categories exhibit numerous outliers, especially on the lower side (lower log install counts).
+This could indicate specific apps in these categories that are significantly less popular than the majority.
+
+### e) Sentiment dataset
+
+In the "googleplaystore_user_reviews" dataset, there are already pre-processed features indicating the Sentiment of the review, its polarity, and its subjectivity.
+Below we visualize the distributions of these features:
+
+```{r echo=FALSE, fig.align='center', fig.height = 9, fig.width=12}
+##########################################
+# 4. e) Sentiment dataset
+##########################################
+
+# Distribution of Sentiments
+p1 = ggplot(googleplaystore_user_reviews, aes(x = Sentiment)) +
+  geom_bar(fill = "darkred") +
+  labs(title = "Distribution of Sentiments", x = "Sentiment", y = "Count") +
+  theme_minimal()
+
+p2 = googleplaystore_user_reviews |> 
+  ggplot(aes(x=Sentiment_Polarity, group=Sentiment, fill=Sentiment)) + 
+  geom_density(adjust=1.5, alpha=0.5)
+
+p3 = googleplaystore_user_reviews |> 
+  ggplot(aes(x=Sentiment_Subjectivity, group=Sentiment, fill=Sentiment)) + 
+  geom_density(adjust=1.5, alpha=0.5)
+
+# Arrange the plots in a grid
+# Arrange the plots in the specified layout
+p1_centered <- arrangeGrob(nullGrob(), p1, nullGrob(), ncol = 3)
+p2_p3_row <- arrangeGrob(p2, p3, ncol = 2)
+grid.arrange(p1_centered, p2_p3_row, nrow = 2)
+```
+
+Hence, we observe that the majority of reviews have a positive sentiment, which suggests that users tend to leave reviews when they are happy / satisfied with the app.
+However the number of negative reviews is greater than the number of neutrals which might indicate that users are more likely to leave a review if they feel strongly (either positive or negative) as opposed to being indifferent about it.
+
+The density plot for polarities are as expected, as negative sentiments are clustered around negative polarity values, neutral sentiments around 0, and positive sentiments are spread across positive values.
+
+Finally the subjectivity plot shows that a large right skew for neutral sentiments, which suggests that neutral reviews tend to be more objective.
+Interestingly, both negative and positive sentiments seem to be centered around a positive subjectivity score of around 0.5, which suggests that these reviews are more subjective and opinion-based.
+
+\newpage
+
+## 5. What factors affect the number of installs an app receives?
+
+### A. Introduction
+
+### B. Analysis
+
+#### Model 1.
+
+#### Model 2.
+
+#### Model 3.
+
+### C. Conclusion
+
+\newpage
+
+## 6. What are the key features that influence an app's rating?
+
+### A. Introduction
+
+### B. Analysis
+
+#### Model 1.
+
+#### Model 2.
+
+#### Model 3.
+
+### C. Conclusion
+
+\newpage
+
+## 7. How does user sentiment in reviews correlate with app ratings?
+
+User sentiment in reviews plays a pivotal role in determining an app's rating, significantly influencing public perception and potential users' decisions.
+Understanding the intricate relationship between user sentiment and app ratings not only aids in enhancing the app's features but also serves as a crucial gauge of user satisfaction and engagement.
+Consequently, our investigation centers on intricately examining how sentiment expressed in user reviews, measured through factors such as sentiment polarity and subjectivity, correlates with the overall app ratings.
+This analytical approach offers valuable insights into user preferences and pain points, empowering developers to refine their applications to better align with user expectations and elevate the overall user experience.
+Through meticulous analysis of sentiment data, our objective is to uncover discernible patterns that can forecast the impact of user reviews on app ratings, thereby providing strategic guidance for improvements and marketing endeavors.
+
+
+### A.Introduction
+
+In our examination of the `googleplaystore_user_reviews` dataset, we've curated relevant data to delve into the dynamics among `reviews`, `sentiment`, `sentiment_polarity`, and `sentiment_subjectivity`.
+Firstly, we'll analyze the dataset to identify the top 20 words that have the most significant impact on sentiment, exploring their effects within the categories of `positive`, `neutral`, and `negative` sentiment.
+Secondly, we'll investigate the correlations among `sentiment`, `sentiment_polarity`, and `sentiment_subjectivity`, conducting analyses on subsets of data categorized by sentiment to delve deeper into these relationships.
+Lastly, in our third model, we plan to introduce sentiment analysis packages to recalibrate the emotional value of each review.
+By leveraging this numerical representation, we'll enhance the dataset and treat it as a variable to further explore the relationships among `sentiment`, `sentiment_polarity`, and `sentiment_subjectivity`.
+Utilizing the `glm` function, we'll determine relevant coefficients and provide comprehensive explanations, aiming to gain a more holistic understanding of the dynamic nature of sentiment in reviews.
+
+### B. Analysis
+
+#### Top 20 words in each sentiment
+
+By preprocessing the text and extracting the most frequent words associated with different sentiments (positive, neutral, and negative), we aim to gain insights into the overall sentiment distribution and key themes present in the reviews.
+This analysis is valuable for understanding customer perceptions and experiences with the Google Play Store apps.
+Additionally, visualizing the top words for each sentiment category provides a clear and concise representation of the most common sentiments expressed by users.
+We anticipate observing distinct patterns and trends in the words used across different sentiment categories, which can inform app developers and stakeholders about areas for improvement and potential strengths of their apps.
+Ultimately, this analysis helps to enhance our understanding of user sentiment and preferences, enabling us to make data-driven decisions to optimize app performance and user satisfaction.
+
+```{r,echo=FALSE}
+library(tidyverse)
+library(tidytext)
+library(wordcloud)
+library(reshape2)
+library(readr)
+
+# Load the dataset
+data <- googleplaystore_user_reviews
+
+# Preprocess the text: remove punctuation, convert to lowercase, remove stopwords
+data_clean <- data %>%
+  mutate(Review_Text = tolower(Translated_Review)) %>%
+  mutate(Review_Text = gsub("[[:punct:]]", "", Review_Text))
+
+# Tokenize the text
+data_tokens <- data_clean %>%
+  unnest_tokens(word, Review_Text)
+
+# Remove stopwords
+data_tokens <- data_tokens %>%
+  anti_join(stop_words, by = "word")
+
+# Function to get top N words for a given sentiment
+get_top_words <- function(data, sentiment, n = 20) {
+  data %>%
+    filter(Sentiment == sentiment) %>%
+    count(word, sort = TRUE) %>%
+    slice_max(order_by = n, n = n) %>%
+    arrange(desc(n))
+}
+
+# Get top 20 words for each sentiment
+top_words_positive <- get_top_words(data_tokens, "Positive")
+top_words_neutral <- get_top_words(data_tokens, "Neutral")
+top_words_negative <- get_top_words(data_tokens, "Negative")
+
+# Function to plot top words
+plot_top_words <- function(top_words, sentiment) {
+  ggplot(top_words, aes(x = reorder(word, n), y = n)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() +
+    labs(title = paste("Top 20 Words in", sentiment, "Reviews"),
+         x = "Words",
+         y = "Frequency")
+}
+
+```
+
+**positive sentiment**
+ The bar chart representing positive app reviews highlights prevalent themes of enjoyment and functionality, with words like `game,` `love,` `fun,` and `easy` indicating user satisfaction and pleasure. Additionally, terms such as `update` and `phone` suggest positive feedback on app updates and compatibility, enhancing user satisfaction. These insights imply that positive reviews often stem from users finding engaging or useful features in the apps, particularly in gaming or functional applications.
+```{r}
+plot_top_words(top_words_positive, "Positive")
+```
+**neutral sentiment**
+In neutral reviews, practical concerns and minor issues are apparent, as indicated by words like `update,` `account,` and `option.` The presence of terms such as `money` and `ads` suggests neutrality based on app monetization strategies or advertising presence, which neither significantly pleases nor annoys users. These reviews often focus on specific features or issues needing improvement but are not necessarily dissatisfying enough to be negative.
+```{r}
+plot_top_words(top_words_neutral, "Neutral")
+```
+**negative sentiment **
+
+Negative app reviews center around frustration and problems, with words like `bad,` `annoying,` and `worst` expressing dissatisfaction. Terms such as `update,` `ads,` and `money` indicate negative experiences, likely related to intrusive ads, poor updates, or perceived poor value for money. The presence of `fix` suggests users are encountering bugs or glitches that negatively impact their app experience.
+```{r}
+plot_top_words(top_words_negative, "Negative")
+```
+
+
+
+
+
+#### Regression Analysis
+
+
+Based on exploratory data analysis (EDA), we can observe the following insights. Firstly, positive and negative comments tend to be more subjective, as they may stem from personal experiences and emotions, while neutral comments are generally more objective, focusing on features without strong emotional content. Secondly, developers and marketers can glean guidance from these charts; understanding polarity helps identify the pros and cons of comments, guiding customer service responses, while comprehending subjectivity aids in distinguishing types of feedback, guiding product improvements and feature development. To better ascertain the effectiveness of these comments, it's essential to probe `sentiment_polarity` and `sentiment_subjectivity` within each sentiment category.
+
+
+```{r,echo=FALSE}
+# Separate the data using filter
+data_positive <- data %>% filter(Sentiment == "Positive")
+data_neutral <- data %>% filter(Sentiment == "Neutral")
+data_negative <- data %>% filter(Sentiment == "Negative")
+
+```
+
+
+
+```{r,echo=FALSE}
+cat("Summary of Sentiment Polarity for positive sentiment:\n\n")
+# Summary statistics for positive sentiment
+summary(data_positive$Sentiment_Polarity)
+cat("Summary of Sentiment Subjectivity for positive sentiment:\n\n")
+summary(data_positive$Sentiment_Subjectivity)
+```
+
+
+```{r,echo=FALSE}
+cat("Summary of Sentiment Polarity for neutral sentiment:\n\n")
+# Summary statistics for neutral sentiment
+summary(data_neutral$Sentiment_Polarity)
+cat("Summary of Sentiment Subjectivity for neutral sentiment:\n\n")
+summary(data_neutral$Sentiment_Subjectivity)
+```
+
+
+```{r,echo=FALSE}
+cat("Summary of Sentiment Polarity for negative sentiment:\n\n")
+# Summary statistics for negative sentiment
+summary(data_negative$Sentiment_Polarity)
+
+cat("Summary of Sentiment Subjectivity for negative sentiment:\n\n")
+summary(data_negative$Sentiment_Subjectivity)
+
+```
+
+The coefficient for Sentiment_Subjectivity is 0.601763, indicating a strong positive relationship with Sentiment_Polarity. This suggests that as subjectivity in positive reviews increases, the polarity also tends to be more positive.
+The model explains about 21.32% of the variance in sentiment polarity (Adjusted R-squared: 0.2132), which is moderate but significant, indicating that while other factors also affect polarity, subjectivity is an important predictor.
+```{r,echo=FALSE}
+# Apply linear model for positive sentiment
+lm_positive <- lm(Sentiment_Polarity ~ Sentiment_Subjectivity, data = data_positive)
+summary(lm_positive)
+```
+
+The coefficient for Sentiment_Subjectivity is -0.578264, showing a significant negative relationship with Sentiment_Polarity in negative reviews. This suggests that higher subjectivity in negative reviews correlates with more negative polarity.
+The model explains about 27.99% of the variance in sentiment polarity (Adjusted R-squared: 0.2799), which is somewhat higher than in positive reviews, indicating a slightly stronger influence of subjectivity on polarity in negative contexts.
+```{r,echo=FALSE}
+# Apply linear model for negative sentiment
+lm_negative <- lm(Sentiment_Polarity ~ Sentiment_Subjectivity, data = data_negative)
+summary(lm_negative)
+```
+
+
+```{r,echo=FALSE}
+par(mfrow = c(2, 2))
+plot(lm_positive)
+plot(lm_negative)
+
+```
+
+Residuals vs Fitted Plots: Both models show some patterns in residuals, which could indicate non-linearity or other underlying effects not captured by the model. There's no apparent funnel shape, which suggests homoscedasticity (constant variance of errors).
+
+Q-Q Plots: The plots for both models indicate some deviation from normality, especially at the tails. This suggests that the residuals are not perfectly normally distributed, which could impact inference from the model.
+
+Scale-Location Plots: The spread of residuals in these plots is fairly constant, supporting the assumption of equal variances across fitted values.
+
+Residuals vs Leverage Plots: There are a few influential points, as indicated by Cook's distance lines, but they do not appear to unduly influence the model's overall fit.
+
+
+The linear models for both positive and negative sentiments show that subjectivity is a significant predictor of sentiment polarity, with subjectivity having a positive impact in positive reviews and a negative impact in negative reviews. The diagnostic checks reveal some concerns with normality and potential influence from a few data points, but overall, the models are robust and provide valuable insights.
+
+Given the evidence of some non-linearity and potential outliers, it may be beneficial to explore more complex models or transformations of variables. Non-linear models or the inclusion of interaction terms could better capture the underlying dynamics of the data. Additionally, considering the substantial proportion of variance unexplained by the models, incorporating additional predictors could enhance the models' explanatory power.
+
+Overall, these findings highlight the nuanced role of subjectivity in shaping user perceptions expressed in reviews. By acknowledging these dynamics, businesses can better understand the underpinnings of user feedback and refine their strategies for addressing user concerns and enhancing overall user experience.
+
+
+#### Enumerating sentiment scores
+
+
+Enumerating sentiment scores from text is a crucial method that converts subjective elements of language into numerical data, facilitating a deeper and more structured understanding of textual content. This approach enables quantifying sentiment trends over time, comparing sentiment across different groups, and tracking changes in response to events. By computing sentiment scores, we engage in quantitative analysis, enhancing decision-making processes, improving products, adjusting marketing strategies, and elevating customer service based on feedback sentiment. Furthermore, the automation and scalability of sentiment scoring enable efficient handling of large text volumes, benefiting applications like social media monitoring, market research, and customer feedback analysis. Additionally, sentiment scoring captures subtle nuances in sentiment expression that may be overlooked in broader analyses, and analyzing scores at the sentence level provides contextual insights, leading to more accurate interpretations of overall sentiment trends.
+
+
+
+```{r,echo= FALSE}
+data_positive <- filter(data, Sentiment == "Positive")
+data_neutral <- filter(data, Sentiment == "Neutral")
+data_negative <- filter(data, Sentiment == "Negative")
+
+# Load AFINN sentiment lexicon
+afinn <- get_sentiments("afinn")
+
+# Function to process and calculate scores
+calculate_scores <- function(df) {
+  df %>%
+    unnest_tokens(word, Translated_Review) %>%  # Tokenizing the text
+    mutate(word = tolower(word)) %>%           # Convert words to lower case
+    inner_join(afinn, by = "word") %>%         # Join with AFINN lexicon
+    group_by(Sentiment) %>%
+    summarize(average_score = mean(value, na.rm = TRUE), .groups = 'drop') # Calculate mean sentiment score
+}
+
+# Calculate scores for each sentiment dataset
+positive_scores <- calculate_scores(data_positive)
+neutral_scores <- calculate_scores(data_neutral)
+negative_scores <- calculate_scores(data_negative)
+
+# Combining all scores into one data frame for plotting
+all_scores <- bind_rows(
+  positive_scores %>% mutate(Sentiment = "Positive"),
+  neutral_scores %>% mutate(Sentiment = "Neutral"),
+  negative_scores %>% mutate(Sentiment = "Negative")
+)
+# Plotting the average sentiment scores
+ggplot(all_scores, aes(x = Sentiment, y = average_score, fill = Sentiment)) +
+  geom_col() +
+  labs(title = "Average Sentiment Scores by Category",
+       x = "Sentiment Category",
+       y = "Average Score") +
+  theme_minimal()
+```
+
+The presented plot serves as a comprehensive visualization illustrating the average sentiment scores across different sentiment categories, namely Negative, Neutral, and Positive. Through this visual representation, we glean valuable insights into the nuanced sentiment dynamics inherent within each category. Notably, positive reviews emerge with a notably elevated average score, indicative of the predominantly favorable sentiments expressed within this segment. In contrast, neutral reviews gravitate towards a sentiment score hovering around the neutral midpoint, suggesting a balance between positive and negative sentiments or a lack of strong emotional expression. Conversely, negative reviews exhibit an average score situated below zero, underscoring the prevalence of adverse sentiments within this segment. This graphical depiction provides compelling evidence of the efficacy of the sentiment scoring mechanism in accurately discerning and quantifying the diverse spectrum of sentiments encapsulated within each category, thereby offering a robust foundation for subsequent analytical endeavors and informed decision-making processes.
+
+\newpage
+```{r, fig.align='center'}
+library(ggplot2)
+
+# Assuming 'data_scored' has been created, if not, follow similar steps as before
+data_scored <- data %>%
+  unnest_tokens(word, Translated_Review) %>%
+  mutate(word = tolower(word)) %>%
+  inner_join(afinn, by = "word") %>%
+  group_by(App, Sentiment, Sentiment_Polarity, Sentiment_Subjectivity) %>%
+  summarize(sentiment_score = mean(value, na.rm = TRUE), .groups = 'drop')
+
+# Scatter plot for Sentiment Score vs. Polarity
+a1 <- ggplot(data_scored, aes(x = Sentiment_Polarity, y = sentiment_score, color = Sentiment)) +
+  geom_point(alpha = 0.6) +
+  labs(title = "Sentiment Score vs. Polarity", x = "Sentiment Polarity", y = "Sentiment Score")
+
+# Scatter plot for Sentiment Score vs. Subjectivity
+a2 <- ggplot(data_scored, aes(x = Sentiment_Subjectivity, y = sentiment_score, color = Sentiment)) +
+  geom_point(alpha = 0.6) +
+  labs(title = "Sentiment Score vs. Subjectivity", x = "Sentiment Subjectivity", y = "Sentiment Score")
+
+grid.arrange(a1, a2, ncol = 2)
+```
+
+These scatter plots serve to illustrate the connection between computed sentiment scores and their corresponding polarity and subjectivity. Across various levels of polarity and subjectivity, the plots reveal a diverse distribution of sentiment scores. Notably, concerning polarity, a discernible correlation emerges, indicating that elevated polarity tends to align with more positive sentiment scores, while diminished polarity correlates with more negative sentiment scores. However, when examining subjectivity, the relationship appears less defined, implying that subjectivity alone may not wield significant predictive power over sentiment scores. These visualizations offer valuable insights into the nuanced interplay between sentiment attributes, informing a deeper comprehension of sentiment dynamics within the dataset.
+
+\newpage
+
+```{r}
+# Calculate correlation matrix
+  cor_matrix <- cor(data_scored[, c("sentiment_score", "Sentiment_Polarity", "Sentiment_Subjectivity")], use = "complete.obs")
+
+# Plot the correlation matrix
+library(corrplot)
+corrplot(cor_matrix, method = "color")
+
+```
+The heatmap provides a comprehensive overview of the correlations among sentiment score, sentiment polarity, and sentiment subjectivity, indicating the strength of their relationships through varying color intensities. Notably, it illustrates a significant positive correlation between sentiment score and sentiment polarity, suggesting that as polarity becomes more positive, sentiment scores tend to increase accordingly. Conversely, the correlation between sentiment score and sentiment subjectivity appears weaker, implying that while subjectivity influences sentiment, its impact on overall sentiment scores may be less pronounced. This visualization offers valuable insights into the complex interplay of sentiment attributes, aiding in a deeper understanding of sentiment dynamics within the dataset and guiding more informed decision-making processes.
+
+\newpage
+
+In employing the linear regression model, we first identify a set of predictor variables that we believe may influence the outcome variable of interest, which in this case is sentiment polarity. These predictors could include sentiment scores, subjectivity levels, and other relevant features extracted from textual data. We then train the model using a dataset where sentiment polarity is known, allowing the model to learn the relationship between the predictors and the target variable. Once trained, we validate the model's performance using separate validation data, ensuring its ability to generalize to unseen data. Through this process, we gain insights into how different factors contribute to sentiment polarity, enabling us to understand the nuanced dynamics of sentiment expression and potentially informing strategies for sentiment modification or more refined sentiment analysis.
+
+
+```{r,echo=FALSE,include=FALSE}
+# Load AFINN sentiment lexicon
+afinn <- get_sentiments("afinn")
+
+# Modified function to calculate sentiment scores and return detailed dataframe
+calculate_scores <- function(df) {
+  df %>%
+    unnest_tokens(word, Translated_Review) %>%  # Tokenizing the text
+    mutate(word = tolower(word)) %>%           # Convert words to lower case
+    inner_join(afinn, by = "word") %>%
+    group_by(Sentiment, App, Sentiment_Polarity, Sentiment_Subjectivity) %>%
+    summarize(sentiment_score = mean(value, na.rm = TRUE), .groups = 'drop')
+}
+
+# Applying function to each sentiment dataset
+data_positive_scored <- calculate_scores(filter(data, Sentiment == "Positive"))
+data_negative_scored <- calculate_scores(filter(data, Sentiment == "Negative"))
+
+# Ensure data is available for modeling
+data_positive_scored <- data_positive_scored %>% ungroup() %>% distinct()
+data_negative_scored <- data_negative_scored %>% ungroup() %>% distinct()
+
+
+# Linear model for positive reviews
+lm_positive <- lm(Sentiment_Polarity ~ Sentiment_Subjectivity + sentiment_score, data = data_positive_scored)
+
+# Linear model for negative reviews
+lm_negative <- lm(Sentiment_Polarity ~ Sentiment_Subjectivity + sentiment_score, data = data_negative_scored)
+```
+
+
+```{r,echo=FALSE}
+# Summarize the models
+summary(lm_positive)  # Model for positive reviews
+```
+The linear model for positive sentiments reveals a strong positive correlation between sentiment subjectivity and polarity, suggesting that more subjective positive reviews tend to exhibit stronger positive sentiments. This association is reinforced by the significant positive coefficient for sentiment scores, indicating their contribution to higher polarity values. The model's explanatory power, represented by the Adjusted R-squared of 0.3633, implies that approximately 36.33% of the variation in sentiment polarity is accounted for by the predictors. Both Sentiment_Subjectivity and sentiment_score play significant roles, with positive coefficients of 0.465701 and 0.079301, respectively, affirming their influence on sentiment polarity. Despite the model's overall goodness of fit, potential outliers or high-leverage points suggest the need for further robustness checks or alternative model considerations to enhance accuracy and interpretation.
+
+```{r,echo=FALSE}
+summary(lm_negative)  # Model for negative reviews
+```
+The negative sentiment model reveals a negative coefficient (-0.491287) for sentiment subjectivity, indicating an inverse relationship between subjectivity and sentiment polarity in negative reviews; more subjective negative reviews tend to have less negative polarity. Conversely, the coefficient for sentiment scores is positive (0.063526), suggesting that even within negative reviews, higher usage of negative words (higher sentiment scores) correlates with less negative polarity. The model exhibits slightly higher explanatory power than the positive sentiment model, with an adjusted R-squared value of 0.4239, indicating that approximately 42.39% of the variance in sentiment polarity is explained by the predictors. This linear model uncovers an intriguing negative relationship between sentiment subjectivity and polarity in negative sentiments, suggesting that more subjective negative reviews often have less negative polarity, perhaps reflecting nuanced criticism or emotional content that does not translate directly into straightforward negativity. The positive coefficient for sentiment scores aligns with this trend, as lower negative scores correlate with higher polarity values. The model explains a substantial portion of the variability, as indicated by the R-squared value.
+
+```{r,echo=FALSE}
+# Visualization for Positive Reviews
+ggplot(data_positive_scored, aes(x = Sentiment_Subjectivity, y = Sentiment_Polarity, color = sentiment_score)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Polarity vs. Subjectivity in Positive Reviews",
+       x = "Sentiment Subjectivity", y = "Sentiment Polarity")
+```
+This scatter plot visually reinforces the findings from the linear model, displaying a clear positive trend between sentiment subjectivity and polarity among positive reviews. The density of points increases as subjectivity and polarity rise, supporting the notion that highly subjective positive reviews are often more emphatically positive. The color gradient representing sentiment scores shows that higher scores generally coincide with higher polarity, aligning with the model's coefficients. This plot effectively illustrates the positive relationship and provides a visual confirmation of the statistical findings, highlighting the consistency across different data representation methods.
+
+
+```{r,echo=FALSE}
+# Visualization for Negative Reviews
+ggplot(data_negative_scored, aes(x = Sentiment_Subjectivity, y = Sentiment_Polarity, color = sentiment_score)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Polarity vs. Subjectivity in Negative Reviews",
+       x = "Sentiment Subjectivity", y = "Sentiment Polarity")
+
+```
+
+
+Contrasting with the positive reviews, the scatter plot for negative reviews shows a negative trend, where increased subjectivity correlates with higher polarity, suggesting a decrease in negativity. This plot visually supports the negative coefficient for subjectivity found in the linear model and illustrates how subjective negative reviews often express criticisms that are less harsh in terms of sentiment polarity. The plot also reveals a broad spread of sentiment scores across different levels of subjectivity, suggesting a complex interaction between these factors in shaping the sentiment expressed in negative reviews. This complexity is crucial for understanding how different aspects of sentiment interact in user feedback and underscores the need for nuanced analysis in handling negative reviews.
+
+
+
+### C. Conclusion
+
+
+Across all sentiments, common words like "app," "update," and "phone" indicate their central role in user reviews, regardless of sentiment. Positive reviews tend to emphasize enjoyment and utility, neutral reviews discuss functionality and minor concerns, while negative reviews highlight faults and negative experiences. Developers can prioritize areas for improvement and enhance user satisfaction by understanding these themes, adjusting features, or strategies based on the most frequent criticisms or praises. This underscores the importance of monitoring user feedback to drive better user experiences and app development.
+
+In the basic regression model, the analysis of the Positive Sentiment Linear Model reveals a significant positive correlation between Sentiment_Subjectivity and Sentiment_Polarity, indicating that increased subjectivity in positive reviews generally correlates with more positive expressions of sentiment. This model accounts for approximately 21.32% of the variance in sentiment polarity, suggesting that while subjectivity is notable, other variables also influence sentiment in positive reviews. Conversely, the Negative Sentiment Linear Model demonstrates a significant negative relationship between Sentiment_Subjectivity and Sentiment_Polarity, suggesting that higher subjectivity in negative reviews tends to be associated with more intensely negative sentiments. This model explains about 27.99% of the variance in sentiment polarity, slightly higher than in the positive model, indicating a stronger influence of subjectivity on sentiment polarity in negative reviews. These findings underscore the importance of subjectivity in shaping sentiment expressions, with its impact manifesting differently across positive and negative contexts, offering valuable insights for businesses seeking to understand and respond to customer feedback effectively.
+
+Moreover, by introducing a new parameter, sentiment scores, and examining the relationship among the variables, the analysis unveils distinct dynamics in how subjectivity and computed sentiment scores influence the polarity of positive versus negative reviews. Positive reviews exhibit a reinforcing effect, where both subjectivity and positive sentiment scores push polarity higher. Conversely, in negative reviews, increased subjectivity tends to mitigate the negativity reflected in the polarity scores, a counterintuitive yet crucial aspect for comprehending nuances in customer feedback. These insights are critical for businesses aiming to effectively parse through customer sentiments to enhance service quality or product offerings. The differences in model fits and residual patterns also prompt careful consideration of potential data issues like outliers or influential points, which could impact the robustness and interpretation of the models.
+
+
+\newpage
+
+## 8. Conclusion
+
+\newpage
+
+## 9. Appendix
+
+```{r, ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
