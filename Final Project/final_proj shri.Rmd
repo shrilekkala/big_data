@@ -767,6 +767,7 @@ The results for the Random Forest model, featuring an in-sample R² value of 0.9
 
 
 ### C. Conclusion
+To evaluate the predictive performance of our three models, we divided our complete dataset into training and test sets using an 80:20 split. We then trained each model—LASSO, Pruned Decision Tree, and Random Forest—on the training data and assessed them on the test data to calculate the out-of-sample R² score. To minimize the effects of randomness, we repeated this process 20 times and collected the out-of-sample R² scores for each model. Our findings are summarized in the boxplot below:
 ```{r}
 ##########################################
 # 6. C. Comparison and Conclusion
@@ -876,7 +877,9 @@ ggplot(results_long, aes(x = Model, y = R2, fill = Model)) +
 ```
 
 
-[TO DO]
+The boxplot shows that the LASSO model consistently achieves the lowest R² scores among the three models. Its median is below 0.2, indicating that it explains less than 20% of the variance in the dataset when used for prediction. The interquartile range (IQR) is tight, suggesting that the model's performance is quite stable across different splits of the data, but unfortunately, it is consistently low. The Pruned Decision Tree model has a slightly higher median R² score than the LASSO, hovering around 0.3, and a slightly wider IQR, which suggests more variability in performance. This increase in variability could be due to the model structure or the specific splits of the dataset. The Random Forest model outperforms both LASSO and the Pruned Decision Tree by a significant margin. Its median R² is close to 0.8, indicating it explains about 80% of the variance in the test data. The IQR is also relatively narrow, suggesting that this model performs robustly across different data splits. The whiskers, which extend close to the top of the plot, indicate that the lowest performance is still relatively high.
+
+Overall, the Random Forest model is the best performer in terms of out-of-sample predictive ability. Its high R² values suggest that it is the most reliable model for predicting the outcome variable.
 
 
 \newpage
