@@ -737,10 +737,7 @@ rf_model <- randomForest(y ~ ., data=x, importance = TRUE, ntree=50)
 
 ```{r}
 load("model_data/installs_rf_model.RData")
-```
-
-```{r}
-importance <- importance(rf_model)  # Get importance
+importance <- importance(installs_rf_model)  # Get importance
 importance_df <- data.frame(Feature = rownames(importance), Importance = importance[,1])  
 ```
 
@@ -763,7 +760,7 @@ Other notable features include app size, user ratings, and whether an app is fre
 The importance of various app categories such as 'finance', 'medical', 'sports', and 'game' also varies, which may reflect distinct market dynamics, user base sizes, and usage patterns inherent to each category. This differentiation underscores the need for developers to consider category-specific strategies when designing and marketing their apps.
 
 ```{r}
-evaluate_tree_model(rf_model, x, y)
+evaluate_tree_model(installs_rf_model, x, y)
 ```
 
 The results for the Random Forest model, featuring an in-sample R² value of 0.9829158 and a Mean Squared Error (MSE) of 0.2329418, illustrate its high predictive performance and accuracy. 
@@ -858,13 +855,10 @@ for (i in 1:20) {
 }
 ```
 
-```{r}
-load("model_data/installs_results_df.RData")
-```
-
 ```{r, fig.align="center"}
+load("model_data/installs_results_df.RData")
 # Plot the results
-results_long <- pivot_longer(results_df,
+results_long <- pivot_longer(installs_results_df,
                              cols = c(R2_LASSO, R2_Tree, R2_rf),
                              names_to = "Model",
                              values_to = "R2")
