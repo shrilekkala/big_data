@@ -4,7 +4,7 @@ title: |
     | BUSN 41201 - Big Data - Final Project
     |
     | \Huge \textbf{Don't Play Me!}
-    | \Huge \textbf{Analyzing Play Store Reviews}
+    | \Huge \textbf{Analyzing Play Store Data}
 subtitle: |
     |
     |
@@ -109,7 +109,7 @@ In this paper, we aim to analyze the Google Play Store dataset to gain a compreh
 The dataset includes details of apps such as categories, ratings, reviews, sizes, installations, and pricing, as well as user reviews with sentiment analysis.
 Our objective is to uncover patterns and trends that can help app developers optimize their offerings and improve user satisfaction.
 
-The Google Play Store dataset, available on Kaggle, consists of two files: `googleplaystore.csv`, which contains detailed information about the apps, and `googleplaystore_user_reviews.csv`, which includes user reviews and sentiment data.
+The Google Play Store dataset, available on $\textrm{Kaggle}^1$, consists of two files: `googleplaystore.csv`, which contains detailed information about the apps, and `googleplaystore_user_reviews.csv`, which includes user reviews and sentiment data. All the information is scraped from the Play Store in August 2018.
 
 Our analysis will focus on the following research questions:
 
@@ -123,6 +123,10 @@ Our analysis will focus on the following research questions:
 We will begin by loading and cleaning the dataset, followed by a thorough exploratory data analysis to uncover initial insights.
 Subsequently, we will perform detailed analyses to address our research questions, culminating in the development of predictive models and the identification of causal relationships.
 We will end by making concluding remarks from our research.
+
+\vspace{4cm}
+\hrulefill
+$1$: https://www.kaggle.com/datasets/lava18/google-play-store-apps
 
 \newpage
 
