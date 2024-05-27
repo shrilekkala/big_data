@@ -3,16 +3,14 @@ title: |
     | \includegraphics[width=16cm]{files/booth_logo.jpg} 
     | BUSN 41201 - Big Data - Final Project
     |
-    |
-    | \LARGE \textbf{PROJECT TITLE}
+    | \Huge \textbf{Don't Play Me!}
+    | \Huge \textbf{Analyzing Play Store Reviews}
 subtitle: |
+    |
     |
     |
     | **26 May 2024**
     | **Yi Cao, Shri Lekkala, Ningxin Zhang **
-    |
-    |
-    |
     |
     |
     | \normalsize \underline{Honor Code}
@@ -40,7 +38,7 @@ editor_options:
 ```
 ```{=latex}
 \setcounter{tocdepth}{4}
-\begin{spacing}{1.375}
+\begin{spacing}{1.3}
 {\parskip=0pt
 \tableofcontents}
 \end{spacing}
@@ -90,8 +88,6 @@ library(rpart.plot)
 
 ## 1. Executive Summary
 
-[REDO AFTER WE COMPLETE THE REPORT]
-
 In this report, we present a comprehensive analysis of the "Google Play Store dataset" to gain insights into the characteristics and success factors of mobile applications.
 By examining various aspects related to app details, including categories, ratings, reviews, sizes, installations, and pricing, we aim to identify patterns and trends that contribute to an app's success on the Google Play Store.
 
@@ -108,8 +104,6 @@ These insights can help optimize app features, improve user satisfaction, and ul
 \newpage
 
 ## 2. Introduction
-
-[WE CAN CHANGE THE QUESTIONS, THESE ARE JUST EXAMPLES]
 
 In this paper, we aim to analyze the Google Play Store dataset to gain a comprehensive understanding of the factors that contribute to the success of mobile applications.
 The dataset includes details of apps such as categories, ratings, reviews, sizes, installations, and pricing, as well as user reviews with sentiment analysis.
@@ -264,7 +258,8 @@ top_categories <- googleplaystore |>
 
 filtered_google <- googleplaystore |>
   filter(Category %in% top_categories) |>
-    mutate(Category = factor(Category, levels = names(sort(table(Category), decreasing = TRUE))))
+    mutate(Category = factor(Category,
+                             levels = names(sort(table(Category), decreasing = TRUE))))
 
 p1 <- ggplot(filtered_google, aes(x = Category)) +
   geom_bar(fill = "darkred") +
@@ -368,7 +363,8 @@ Therefore, we might exclude these variables from later analysis.
 # cor_matrix <- cor(google_cleaned, use = "complete.obs")  # using complete observations
 # 
 # # Plot the correlation matrix
-# corrplot(cor_matrix, method = "color", col = colorRampPalette(c("white", "darkred"))(200),
+# corrplot(cor_matrix, method = "color",
+#          col = colorRampPalette(c("white", "darkred"))(200),
 #          type = "upper", order = "hclust",
 #          addCoef.col = "black", # Adding correlation coefficients
 #          tl.col = "black", tl.srt = 45, # Text label color and rotation
@@ -418,7 +414,8 @@ p1 <- ggplot(googleplaystore, aes(x = Type, fill = Type)) +
 # Distribution of Content Ratings
 filtered_google <- googleplaystore |>
     mutate(Content.Rating = factor(Content.Rating,
-                                   levels = names(sort(table(Content.Rating), decreasing = TRUE))))
+                                   levels = names(sort(table(Content.Rating),
+                                                       decreasing = TRUE))))
 p2 <- ggplot(filtered_google, aes(x = `Content.Rating`, fill = `Content.Rating`)) +
   geom_bar(fill = "darkred") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -451,7 +448,7 @@ p3 = ggplot(category_counts, aes(x = n, y = Category, fill = Category)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 7)) +
   labs(title = "Distribution of App Categories", x = "Count", y = "Category") +
   theme(legend.position = "none") +
-  scale_fill_manual(values = colorRampPalette(brewer.pal(8, "Set2"))(nrow(category_counts))) +
+  scale_fill_manual(values = colorRampPalette(brewer.pal(8, "Set2"))(nrow(category_counts)))+
   theme(panel.grid.minor = element_blank()) +
   coord_flip()
 
@@ -672,7 +669,8 @@ Interestingly, both negative and positive sentiments seem to be centered around 
 installs_data <- googleplaystore |> na.omit()
 
 # The data is scraped from August 2018
-installs_data$Days_Since_Update <- as.numeric(as.Date("2018-08-15") - installs_data$Last.Updated)
+installs_data$Days_Since_Update <- as.numeric(as.Date("2018-08-15") 
+                                              - installs_data$Last.Updated)
 
 # Log transform Installs, Size, and Reviews to remove skewness
 installs_data <- installs_data |>
@@ -855,10 +853,11 @@ importance_df <- data.frame(Feature = rownames(importance), Importance = importa
 ```{r, fig.align='center'}
 ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
   geom_col(fill = "darkred") +
-  labs(title = "Feature Importance in Random Forest Model", x = "Features", y = "Importance") +
+  labs(title = "Feature Importance in Random Forest Model",
+       x = "Features", y = "Importance") +
   theme_minimal() +
   coord_flip()+
-  theme(axis.text.y = element_text(size = 6))  # Flip coordinates for easier reading of feature names
+  theme(axis.text.y = element_text(size = 6))
 ```
 
 Similarly with decision tree, the random forest model reveals that the number of reviews is the most significant determinant, indicating that user engagement, as measured by review volume, plays a pivotal role in app success.
@@ -979,7 +978,8 @@ results_long <- pivot_longer(installs_results_df,
                              cols = c(R2_LASSO, R2_Tree, R2_rf),
                              names_to = "Model",
                              values_to = "R2")
-results_long$Model <- factor(results_long$Model, levels = c("R2_LASSO", "R2_Tree", "R2_rf"))
+results_long$Model <- factor(results_long$Model,
+                             levels = c("R2_LASSO", "R2_Tree", "R2_rf"))
 
 
 # Create a boxplot to compare the R2 scores for each model
@@ -1535,8 +1535,8 @@ colnames(transposed_df) <- transposed_df[1, ]
 transposed_df <- transposed_df[-1, ]
 
 # Output the table
-# kable(df_stats, caption = "Summary Statistics for Different Sentiment Categories", align = 'c')
-kable(df_stats, format="latex",  booktabs=TRUE, , caption = "Summary Statistics for Different Sentiment Categories", align = 'c') |>
+kable(df_stats, format="latex",  booktabs=TRUE,
+      caption = "Summary Statistics for Different Sentiment Categories", align = 'c') |>
   kable_styling(latex_options="scale_down")
 ```
 
@@ -1624,8 +1624,7 @@ calculate_scores <- function(df) {
     mutate(word = tolower(word)) |>           # Convert words to lower case
     inner_join(afinn, by = "word") |>         # Join with AFINN lexicon
     group_by(Sentiment) |>
-    summarize(average_score = mean(value, na.rm = TRUE), .groups = 'drop') # Calculate mean sentiment score
-}
+    summarize(average_score = mean(value, na.rm = TRUE), .groups = 'drop')}
 
 # Calculate scores for each sentiment dataset
 positive_scores <- calculate_scores(data_positive)
@@ -1668,12 +1667,15 @@ data_scored <- data %>%
   summarize(sentiment_score = mean(value, na.rm = TRUE), .groups = 'drop')
 
 # Scatter plot for Sentiment Score vs. Polarity
-a1 <- ggplot(data_scored, aes(x = Sentiment_Polarity, y = sentiment_score, color = Sentiment)) +
+a1 <- ggplot(data_scored, aes(x = Sentiment_Polarity,
+                              y = sentiment_score, color = Sentiment)) +
   geom_point(alpha = 0.6) +
-  labs(title = "Sentiment Score vs. Polarity", x = "Sentiment Polarity", y = "Sentiment Score")
+  labs(title = "Sentiment Score vs. Polarity",
+       x = "Sentiment Polarity", y = "Sentiment Score")
 
 # Scatter plot for Sentiment Score vs. Subjectivity
-a2 <- ggplot(data_scored, aes(x = Sentiment_Subjectivity, y = sentiment_score, color = Sentiment)) +
+a2 <- ggplot(data_scored, aes(x = Sentiment_Subjectivity,
+                              y = sentiment_score, color = Sentiment)) +
   geom_point(alpha = 0.6) +
   labs(title = "Sentiment Score vs. Subjectivity", x = "Sentiment Subjectivity", y = "Sentiment Score")
 
@@ -1690,7 +1692,8 @@ These visualizations offer valuable insights into the nuanced interplay between 
 
 ```{r, fig.align='center', fig.height=3}
 # Calculate correlation matrix
-cor_matrix <- cor(data_scored[, c("sentiment_score", "Sentiment_Polarity", "Sentiment_Subjectivity")], use = "complete.obs")
+cor_matrix <- cor(data_scored[, c("sentiment_score", "Sentiment_Polarity",
+                                  "Sentiment_Subjectivity")], use = "complete.obs")
 colnames(cor_matrix) <- c("Score", "Polarity", "Subjectivity")
 rownames(cor_matrix) <- c("Score", "Polarity", "Subjectivity")
 
@@ -1741,10 +1744,12 @@ data_negative_scored <- data_negative_scored %>% ungroup() %>% distinct()
 
 
 # Linear model for positive reviews
-lm_positive <- lm(Sentiment_Polarity ~ Sentiment_Subjectivity + sentiment_score, data = data_positive_scored)
+lm_positive <- lm(Sentiment_Polarity ~ Sentiment_Subjectivity + sentiment_score,
+                  data = data_positive_scored)
 
 # Linear model for negative reviews
-lm_negative <- lm(Sentiment_Polarity ~ Sentiment_Subjectivity + sentiment_score, data = data_negative_scored)
+lm_negative <- lm(Sentiment_Polarity ~ Sentiment_Subjectivity + sentiment_score,
+                  data = data_negative_scored)
 ```
 
 ```{r, echo=FALSE, comment=NA}
@@ -1771,7 +1776,8 @@ The model explains a substantial portion of the variability, as indicated by the
 
 ```{r echo=FALSE, fig.align='center', fig.height=3, fig.width=6}
 # Visualization for Positive Reviews
-ggplot(data_positive_scored, aes(x = Sentiment_Subjectivity, y = Sentiment_Polarity, color = sentiment_score)) +
+ggplot(data_positive_scored, aes(x = Sentiment_Subjectivity, y = Sentiment_Polarity,
+                                 color = sentiment_score)) +
   geom_point(alpha = 0.6) +
   scale_color_gradient(low = "darkred", high = "red")+
   geom_smooth(method = "lm", se = FALSE, formula = y ~ x) +
@@ -1786,7 +1792,8 @@ This plot effectively illustrates the positive relationship and provides a visua
 
 ```{r echo=FALSE, fig.align='center', fig.height=3, fig.width=6}
 # Visualization for Negative Reviews
-ggplot(data_negative_scored, aes(x = Sentiment_Subjectivity, y = Sentiment_Polarity, color = sentiment_score)) +
+ggplot(data_negative_scored, aes(x = Sentiment_Subjectivity, y = Sentiment_Polarity,
+                                 color = sentiment_score)) +
   geom_point(alpha = 0.6) +
   scale_color_gradient(low = "darkred", high = "red")+
   geom_smooth(method = "lm", se = FALSE, formula = y ~ x) +
@@ -1823,13 +1830,13 @@ The differences in model fits and residual patterns also prompt careful consider
 ## 8. Conclusion and Improvements
 In this comprehensive analysis of the Google Play Store dataset, we have explored the multifaceted relationships between app characteristics, user sentiment, and market performance. Our findings illuminate the profound impact of user reviews and app updates on app success metrics such as install counts and ratings. Through rigorous statistical modeling, including techniques like LASSO, Decision Trees, and Random Forest, we've identified key predictors of app success and provided a nuanced understanding of the factors that enhance user engagement and satisfaction.
 
-## Key Findings:
+** Key Findings: **
 
 - **User Reviews:** The volume and sentiment of user reviews are strongly correlated with app visibility and popularity, underscoring the importance of maintaining high user satisfaction.
 - **App Updates:** Frequent updates, which often reflect active development and responsiveness to user feedback, are associated with higher user ratings, suggesting that timely content renewal is critical.
 - **Sentiment Analysis:** Positive sentiment in user reviews generally leads to higher ratings, highlighting the need for apps to elicit and sustain positive user experiences.
 
-## Recommendations for Improvement:
+** Recommendations for Improvement: **
 
 1. **Deepening Feature Analysis:** To refine the predictive accuracy of our models, further development of feature engineering techniques is recommended. Integrating more detailed user interaction metrics and app performance indicators could uncover deeper insights.
 2. **Model Enhancement:** Continued optimization of the existing models, especially through advanced hyperparameter tuning and the exploration of ensemble methods, could improve their predictive strength and reliability.
