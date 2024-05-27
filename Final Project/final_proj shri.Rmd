@@ -27,11 +27,17 @@ output:
 indent: true
 header-includes:
     - \usepackage{setspace}\doublespacing
-    - \setlength{\parskip}{0.35cm plus2mm minus1mm}
+    - \setlength{\parskip}{0.35cm plus1.5mm minus1mm}
     - \AtBeginEnvironment{Shaded}{\singlespace}
+editor_options: 
+  markdown: 
+    wrap: sentence
 ---
+
+```{=tex}
 \newpage
 \singlespacing
+```
 ```{=latex}
 \setcounter{tocdepth}{4}
 \begin{spacing}{1.375}
@@ -42,8 +48,8 @@ header-includes:
 Note: The full the code used in all the questions can be found in the appendix.
 \doublespacing
 
-
 \newpage
+
 ```{r setup, include=FALSE}
 ##########################################
 # Setup
@@ -74,47 +80,60 @@ library(tree)
 library(janitor)
 library(randomForest)
 library(rsample)
+library(wordcloud)
+library(textdata)
+library(tidytext)
+library(reshape2)
 ```
 
 ## 1. Executive Summary
-[REDO AFTER WE COMPLETE THE REPORT]  
 
-In this report, we present a comprehensive analysis of the "Google Play Store dataset" to gain insights into the characteristics and success factors of mobile applications. By examining various aspects related to app details, including categories, ratings, reviews, sizes, installations, and pricing, we aim to identify patterns and trends that contribute to an app's success on the Google Play Store.
+[REDO AFTER WE COMPLETE THE REPORT]
 
+In this report, we present a comprehensive analysis of the "Google Play Store dataset" to gain insights into the characteristics and success factors of mobile applications.
+By examining various aspects related to app details, including categories, ratings, reviews, sizes, installations, and pricing, we aim to identify patterns and trends that contribute to an app's success on the Google Play Store.
 
-We begin by exploring the general statistics of apps, focusing on the distribution of app categories, ratings, and reviews. This provides a foundational understanding of the data and highlights key areas of interest. Next, we delve into specific analyses to understand the relationship between app size, installs, and pricing, exploring how these factors influence an app's popularity and user engagement.
+We begin by exploring the general statistics of apps, focusing on the distribution of app categories, ratings, and reviews.
+This provides a foundational understanding of the data and highlights key areas of interest.
+Next, we delve into specific analyses to understand the relationship between app size, installs, and pricing, exploring how these factors influence an app's popularity and user engagement.
 
+Our study also includes a sentiment analysis of user reviews, examining the polarity and subjectivity of feedback to understand how user sentiments correlate with app ratings and success.
+Additionally, we develop predictive models to forecast app ratings based on various features, and we investigate potential causal relationships between app characteristics and their performance metrics.
 
-
-Our study also includes a sentiment analysis of user reviews, examining the polarity and subjectivity of feedback to understand how user sentiments correlate with app ratings and success. Additionally, we develop predictive models to forecast app ratings based on various features, and we investigate potential causal relationships between app characteristics and their performance metrics.
-
-
-By leveraging data visualization, feature engineering, and predictive modeling techniques, we aim to provide actionable insights for potential app developers. These insights can help optimize app features, improve user satisfaction, and ultimately enhance the app's visibility and success on the Google Play Store.
+By leveraging data visualization, feature engineering, and predictive modeling techniques, we aim to provide actionable insights for potential app developers.
+These insights can help optimize app features, improve user satisfaction, and ultimately enhance the app's visibility and success on the Google Play Store.
 
 \newpage
-## 2. Introduction
-[WE CAN CHANGE THE QUESTIONS, THESE ARE JUST EXAMPLES]  
 
-In this paper, we aim to analyze the Google Play Store dataset to gain a comprehensive understanding of the factors that contribute to the success of mobile applications. The dataset includes details of apps such as categories, ratings, reviews, sizes, installations, and pricing, as well as user reviews with sentiment analysis. Our objective is to uncover patterns and trends that can help app developers optimize their offerings and improve user satisfaction.
+## 2. Introduction
+
+[WE CAN CHANGE THE QUESTIONS, THESE ARE JUST EXAMPLES]
+
+In this paper, we aim to analyze the Google Play Store dataset to gain a comprehensive understanding of the factors that contribute to the success of mobile applications.
+The dataset includes details of apps such as categories, ratings, reviews, sizes, installations, and pricing, as well as user reviews with sentiment analysis.
+Our objective is to uncover patterns and trends that can help app developers optimize their offerings and improve user satisfaction.
 
 The Google Play Store dataset, available on Kaggle, consists of two files: `googleplaystore.csv`, which contains detailed information about the apps, and `googleplaystore_user_reviews.csv`, which includes user reviews and sentiment data.
 
 Our analysis will focus on the following research questions:
 
-- **What factors affect the number of installs an app receives?** Specifically, what is the relationship between app size, type (free or paid), price, and the number of installs?
+-   **What factors affect the number of installs an app receives?** Specifically, what is the relationship between app size, type (free or paid), price, and the number of installs?
 
-- **What are the key features that influence an app's rating?** 
-How do factors like category, price, and number of reviews contribute to the overall rating of an app?
+-   **What are the key features that influence an app's rating?** How do factors like category, price, and number of reviews contribute to the overall rating of an app?
 
-- **How does user sentiment in reviews correlate with app ratings?**   
-Can sentiment analysis of user reviews provide additional insights into user satisfaction and app performance?
+-   **How does user sentiment in reviews correlate with app ratings?**\
+    Can sentiment analysis of user reviews provide additional insights into user satisfaction and app performance?
 
-We will begin by loading and cleaning the dataset, followed by a thorough exploratory data analysis to uncover initial insights. Subsequently, we will perform detailed analyses to address our research questions, culminating in the development of predictive models and the identification of causal relationships. We will end by making concluding remarks from our research.
+We will begin by loading and cleaning the dataset, followed by a thorough exploratory data analysis to uncover initial insights.
+Subsequently, we will perform detailed analyses to address our research questions, culminating in the development of predictive models and the identification of causal relationships.
+We will end by making concluding remarks from our research.
 
 \newpage
+
 ## 3. Dataset
 
 ### a) Understanding the data
+
 ```{r include=FALSE}
 ##########################################
 # 3. a) Understanding the datasets
@@ -131,41 +150,40 @@ colnames(googleplaystore_user_reviews_raw)
 dim(googleplaystore_raw)
 dim(googleplaystore_user_reviews_raw)
 ```
-For `googleplaystore.csv` there are the following columns:  
-- App: Application Name  
-- Category: Category Type (e.g. Family, Game, Art)  
-- Rating: User rating review  
-- Reviews: Number of reviews  
-- Size: Download size of application  
-- Installs: Number of user downloads  0..
-- Type: Paid or Free  
-- Price: Price of App  
-- Content.Rating: Age group that app is targeted at (E.g. Everyone, Teen, Child)  
-- Genres: Other categories the app belongs to, other than the main category  
-- Last.Updated: Date when app was last updated  
-- Current.Ver: Current app version available  
-- Android.Ver: Minimum required Android version for app  
+
+For `googleplaystore.csv` there are the following columns:\
+- App: Application Name\
+- Category: Category Type (e.g. Family, Game, Art)\
+- Rating: User rating review\
+- Reviews: Number of reviews\
+- Size: Download size of application\
+- Installs: Number of user downloads 0..
+- Type: Paid or Free\
+- Price: Price of App\
+- Content.Rating: Age group that app is targeted at (E.g. Everyone, Teen, Child)\
+- Genres: Other categories the app belongs to, other than the main category\
+- Last.Updated: Date when app was last updated\
+- Current.Ver: Current app version available\
+- Android.Ver: Minimum required Android version for app\
 There are a total of 10841 rows (applications).
 
-For `googleplaystore_user_reviews.csv` there are the following columns:  
-- App: Application Name  
-- Translated_Review: User review, translated to English  
-- Sentiment: Positive / Negative / Neutral (Preprocessed)  
-- Sentiment_Polarity: Sentiment polarity score (Preprocessed)  
+For `googleplaystore_user_reviews.csv` there are the following columns:\
+- App: Application Name\
+- Translated_Review: User review, translated to English\
+- Sentiment: Positive / Negative / Neutral (Preprocessed)\
+- Sentiment_Polarity: Sentiment polarity score (Preprocessed)\
 - Sentiment_Subjectivity: Sentiment subjectivity score (Preprocessed)
 
-This dataset contains the first 100 'most relevant' review for each app, 
-with some prepocessing already done to add the last 3 features.  
+This dataset contains the first 100 'most relevant' review for each app, with some prepocessing already done to add the last 3 features.\
 There are a total of 64295 rows (reviews).
 
-
 ### b) Data Cleaning
+
 ```{r include=FALSE}
 ##########################################
 # 3. b) Data Cleaning
 ##########################################
 ```
-
 
 ```{r include=TRUE, echo=TRUE}
 # Convert the variables to the appropriate data type
@@ -202,11 +220,10 @@ googleplaystore <- googleplaystore_raw |>
   # Remove duplicate rows
   distinct()
 ```
-For the `googleplaystore` dataset, we first process the variables by converting 
-columns to the appropriate datatype. 
-For example Installs, Size, Reviews Price, and Android.Ver are converted to numerics, 
-Last.Updated is converted to date.
-Then we filter out apps with Type 0 or NA, and remove duplicated rows.  
+
+For the `googleplaystore` dataset, we first process the variables by converting columns to the appropriate datatype.
+For example Installs, Size, Reviews Price, and Android.Ver are converted to numerics, Last.Updated is converted to date.
+Then we filter out apps with Type 0 or NA, and remove duplicated rows.\
 After this, we are left with 10356 rows.
 
 ```{r include=TRUE, echo=TRUE}
@@ -216,13 +233,16 @@ googleplaystore_user_reviews <- googleplaystore_user_reviews_raw |>
   # Convert Sentiment to factor
   mutate(Sentiment = as.factor(Sentiment))
 ```
-With the `googleplaystore_user_reviews` dataset, the variables were already well structured,
-but we noticed there were many rows with "nan"s.
+
+With the `googleplaystore_user_reviews` dataset, the variables were already well structured, but we noticed there were many rows with "nan"s.
 After filtering these out, we were left with 37432 rows.
 
 \newpage
+
 ## 4. Exploratory Analysis
+
 ### a) Numerical Features
+
 ```{r include=FALSE, message = FALSE}
 ##########################################
 # 4. a) Overall Histogram Overview
@@ -235,13 +255,13 @@ common_theme <- theme(
 )
 
 # Determine the top 10 values for categorical data
-top_categories <- googleplaystore %>%
-  count(Category) %>%
-  top_n(10) %>%
+top_categories <- googleplaystore |>
+  count(Category) |>
+  top_n(10) |>
   pull(Category)
 
-filtered_google <- googleplaystore %>%
-  filter(Category %in% top_categories) %>%
+filtered_google <- googleplaystore |>
+  filter(Category %in% top_categories) |>
     mutate(Category = factor(Category, levels = names(sort(table(Category), decreasing = TRUE))))
 
 p1 <- ggplot(filtered_google, aes(x = Category)) +
@@ -278,7 +298,7 @@ p7 <- ggplot(googleplaystore, aes(x = Price)) +
   geom_histogram(bins = 30, fill = "darkred") +
   ggtitle("Price")+common_theme
 #########
-filtered_google <- googleplaystore %>%
+filtered_google <- googleplaystore |>
     mutate(Content.Rating = factor(Content.Rating,
                                    levels = names(sort(table(Content.Rating),
                                                        decreasing = TRUE))))
@@ -288,12 +308,12 @@ p8 <- ggplot(filtered_google, aes(x = Content.Rating)) +
   theme(axis.text.x = element_text(size = 10,angle = 45, hjust = 1)) + 
   common_theme
 #########
-top_genres <- googleplaystore %>%
-  count(Genres) %>%
-  top_n(10) %>%
+top_genres <- googleplaystore |>
+  count(Genres) |>
+  top_n(10) |>
   pull(Genres)
-filtered_google <- googleplaystore %>%
-  filter(Genres %in% top_genres) %>%
+filtered_google <- googleplaystore |>
+  filter(Genres %in% top_genres) |>
   mutate(Genres = factor(Genres, levels = names(sort(table(Genres), decreasing = TRUE))))
 p9 <- ggplot(filtered_google, aes(x = Genres)) +
   geom_bar(fill = "darkred") +
@@ -317,19 +337,29 @@ p12 <- ggplot(filtered_google, aes(x = Android.Ver)) +
 grid.arrange(p2, p7, p4, p3, p5, p10, p11, p12,
              nrow = 2, ncol = 4, heights = rep(1, 2), widths = rep(1, 4))
 ```
-According to the histograms, most apps have high ratings, peaking around 4 to 5, with fewer apps rated below 3, indicating generally positive user feedback. The majority of apps have a low number of installs, while a few apps have extremely high install numbers, showing a highly skewed distribution. Since installs are highly skewed, we will perform a log transformation on it in later analysis.
 
-Regarding other numerical variables, the vast majority of apps are free, with the few paid apps showing a wide price range, including some very expensive ones. Most apps are small in size, with a significant drop-off as size increases. The majority are less than 25 MB, with very few exceeding 100 MB. Similarly, most apps have a low number of reviews, with a small number having extremely high reviews, indicating a skewed distribution where a few apps are very popular while many are not widely reviewed. Most apps have been updated recently, with a notable increase in updates around 2018, suggesting the dataset is current and apps are actively maintained. Most apps are on version 1 or 2, with a sharp decrease in the number of apps as the version number increases, indicating that many apps do not undergo numerous versions.
+According to the histograms, most apps have high ratings, peaking around 4 to 5, with fewer apps rated below 3, indicating generally positive user feedback.
+The majority of apps have a low number of installs, while a few apps have extremely high install numbers, showing a highly skewed distribution.
+Since installs are highly skewed, we will perform a log transformation on it in later analysis.
 
-Most apps require Android version 4 or 4.5, with fewer requiring higher versions, suggesting developers aim for compatibility with older Android versions to reach a wider audience. However, the data for these version variables is not clean and contains extreme outliers even after cleaning, making it difficult to interpret. Therefore, we might exclude these variables from later analysis.
+Regarding other numerical variables, the vast majority of apps are free, with the few paid apps showing a wide price range, including some very expensive ones.
+Most apps are small in size, with a significant drop-off as size increases.
+The majority are less than 25 MB, with very few exceeding 100 MB.
+Similarly, most apps have a low number of reviews, with a small number having extremely high reviews, indicating a skewed distribution where a few apps are very popular while many are not widely reviewed.
+Most apps have been updated recently, with a notable increase in updates around 2018, suggesting the dataset is current and apps are actively maintained.
+Most apps are on version 1 or 2, with a sharp decrease in the number of apps as the version number increases, indicating that many apps do not undergo numerous versions.
 
+Most apps require Android version 4 or 4.5, with fewer requiring higher versions, suggesting developers aim for compatibility with older Android versions to reach a wider audience.
+However, the data for these version variables is not clean and contains extreme outliers even after cleaning, making it difficult to interpret.
+Therefore, we might exclude these variables from later analysis.
 
 ### b) Correlation Matrix
+
 ```{r}
 ##########################################
 # 4. b) Correlation Matrix
 ##########################################
-# google_cleaned <- googleplaystore %>%
+# google_cleaned <- googleplaystore |>
 #   select(Rating, Reviews, Size, Installs, Price)
 # 
 # # Calculate correlation matrix
@@ -363,11 +393,15 @@ corrplot(cor_matrix, method = "color", type = "upper",
          title = "Correlation Matrix of Google Play Store Data",
          mar = c(0, 0, 1, 0))
 ```
+
 This seems surprising initially as the variables appear to be fairly uncorrelated with eachother, except for the fact that "Installs" and "Reviews" which are highly correlated with a score of 0.64, which would make sense as one would expect a more popular app with a greater number of installs to also have a higher number of reviews.
-One surprising variable that is somewhat positively correlated with others is "Size", with small positive correlations with "Reviews" and "Installs". This might perhaps be due to the fact with apps with a larger download size are more 'complicated' and may perform more functions, and thus lead to a greater number of installations and thus reviews too.
+One surprising variable that is somewhat positively correlated with others is "Size", with small positive correlations with "Reviews" and "Installs".
+This might perhaps be due to the fact with apps with a larger download size are more 'complicated' and may perform more functions, and thus lead to a greater number of installations and thus reviews too.
 
 ### c) Categorical Features
+
 We also look at the distribution of the categorical features in our dataset:
+
 ```{r echo=FALSE, fig.align='center'}
 ##########################################
 # 4. c) Categorical Features
@@ -380,7 +414,7 @@ p1 <- ggplot(googleplaystore, aes(x = Type, fill = Type)) +
   theme(legend.position = "none")
 
 # Distribution of Content Ratings
-filtered_google <- googleplaystore %>%
+filtered_google <- googleplaystore |>
     mutate(Content.Rating = factor(Content.Rating,
                                    levels = names(sort(table(Content.Rating), decreasing = TRUE))))
 p2 <- ggplot(filtered_google, aes(x = `Content.Rating`, fill = `Content.Rating`)) +
@@ -392,8 +426,8 @@ p2 <- ggplot(filtered_google, aes(x = `Content.Rating`, fill = `Content.Rating`)
 # Arrange the plots in a grid
 grid.arrange(p1, p2, ncol = 2)
 ```
-So immediately we observe that there is a much greater proportion of free apps than paid,
-this aligns with the common "freemium" model where apps are free to download but may offer in-app purchases.
+
+So immediately we observe that there is a much greater proportion of free apps than paid, this aligns with the common "freemium" model where apps are free to download but may offer in-app purchases.
 This model also lowers the barrier to entry to users.
 
 The content rating distribution shows that the the significant majority of apps are aimed at is "Everyone".
@@ -443,11 +477,14 @@ p3
 p4
 ```
 
-Next, looking at the distribution of category, sorted by count, we see that distribution is very heavily skewed to the right. In particular the first 3 categories (Family, Game, and Tools) have a very large number of apps, after which the count per category drops and falls slowly for the remaining categories.
+Next, looking at the distribution of category, sorted by count, we see that distribution is very heavily skewed to the right.
+In particular the first 3 categories (Family, Game, and Tools) have a very large number of apps, after which the count per category drops and falls slowly for the remaining categories.
 
-Secondly, from the genre distribution (recalling that genres are additional categories that apps can be listed as), we observe the same skewness. However the top 30-40% of genres contain most of the count, whereas afterwards the genres listed have a count of almost 0 which suggests that there are many genres with very few apps, suggesting either niche markets or less popular app types.
+Secondly, from the genre distribution (recalling that genres are additional categories that apps can be listed as), we observe the same skewness.
+However the top 30-40% of genres contain most of the count, whereas afterwards the genres listed have a count of almost 0 which suggests that there are many genres with very few apps, suggesting either niche markets or less popular app types.
 
 \singlespacing
+
 ```{r}
 # Combine the dataframes
 combined_df <- data.frame(
@@ -459,13 +496,14 @@ combined_df <- data.frame(
 )
 
 # Print the combined dataframe using kable
-kable(combined_df, caption = "Top 10 Genres and Categories", align = 'c') %>%
+kable(combined_df, caption = "Top 10 Genres and Categories", align = 'c') |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 ```
+
 \doublespacing
 
-
 ### d) Exploring Categorical Features vs Y
+
 ```{r, fig.align='center'}
 ##########################################
 # 4. d) Categorical Features
@@ -490,9 +528,21 @@ b2<-ggplot(googleplaystore, aes(x = Type, y = log(Installs))) +
 grid.arrange(b1, b2, ncol = 2)
 ```
 
-The rating of free Apps display a broad range of ratings from 1 to 5, with most ratings clustered around 4. There are many outliers on the lower end, suggesting some free apps are rated poorly. Similar to free apps, ratings mainly cluster around 4. However, there are fewer lower outliers compared to free apps, indicating generally higher satisfaction among users who purchase apps. Both free and paid apps have a median rating close to 4, showing that overall user satisfaction is high across both app types. The presence of more lower outliers in free apps might indicate variability in quality, where some free apps may not meet user expectations, perhaps due to ads or less functionality.
+The rating of free Apps display a broad range of ratings from 1 to 5, with most ratings clustered around 4.
+There are many outliers on the lower end, suggesting some free apps are rated poorly.
+Similar to free apps, ratings mainly cluster around 4.
+However, there are fewer lower outliers compared to free apps, indicating generally higher satisfaction among users who purchase apps.
+Both free and paid apps have a median rating close to 4, showing that overall user satisfaction is high across both app types.
+The presence of more lower outliers in free apps might indicate variability in quality, where some free apps may not meet user expectations, perhaps due to ads or less functionality.
 
-The rating of free Apps have a broader distribution of log installs, with the median around 15. The range of installs is wide, showing that some free apps achieve significantly higher installs. The distribution of installs is noticeably more constrained and lower than that of free apps. The median log install is lower, and the range (IQR) is narrower, indicating less variation in the number of installs. Thus, free apps tend to reach more users, reflected by the higher median installs and wider distribution. This is expected as the barrier to try a free app is lower than for a paid app. Paid apps, while having fewer installs, tend to have a more consistent range of installs. This could suggest a dedicated user base willing to pay for apps that potentially offer higher quality or unique features not found in free apps.
+The rating of free Apps have a broader distribution of log installs, with the median around 15.
+The range of installs is wide, showing that some free apps achieve significantly higher installs.
+The distribution of installs is noticeably more constrained and lower than that of free apps.
+The median log install is lower, and the range (IQR) is narrower, indicating less variation in the number of installs.
+Thus, free apps tend to reach more users, reflected by the higher median installs and wider distribution.
+This is expected as the barrier to try a free app is lower than for a paid app.
+Paid apps, while having fewer installs, tend to have a more consistent range of installs.
+This could suggest a dedicated user base willing to pay for apps that potentially offer higher quality or unique features not found in free apps.
 
 ```{r, fig.align='center'}
 b1<-ggplot(googleplaystore, aes(x = Content.Rating, y = Rating)) +
@@ -516,7 +566,9 @@ b2<-ggplot(googleplaystore, aes(x = Content.Rating, y = log(Installs))) +
 grid.arrange(b1, b2, ncol = 2)
 ```
 
-Content ratings such as "Everyone" and "Teen" cover a broad audience, resulting in higher downloads. Categories with restricted audiences like "Adults Only 18+" have both fewer downloads and lower ratings, possibly due to content restrictions or niche market appeal. Thus, Apps aimed at a general audience ("Everyone") might expect higher installations and generally favorable ratings, whereas apps targeted at adults or mature audiences might face more challenges in both downloads and user acceptance.
+Content ratings such as "Everyone" and "Teen" cover a broad audience, resulting in higher downloads.
+Categories with restricted audiences like "Adults Only 18+" have both fewer downloads and lower ratings, possibly due to content restrictions or niche market appeal.
+Thus, Apps aimed at a general audience ("Everyone") might expect higher installations and generally favorable ratings, whereas apps targeted at adults or mature audiences might face more challenges in both downloads and user acceptance.
 
 ```{r, fig.align='center'}
 # Create the box plot
@@ -530,8 +582,12 @@ ggplot(googleplaystore, aes(x = Category, y = Rating)) +
   theme(axis.text.x = element_text(size = 6,angle = 45, hjust = 1, vjust = 1))
 ```
 
-Most categories have median ratings close to 4.0, suggesting a generally positive rating across the board. The boxes are mostly concentrated in the higher rating range (around 3.5 to 4.5), indicating overall good ratings across various categories. Categories like "Art & Design" and "Books & Reference" show less variability in ratings, as indicated by shorter boxes, meaning that ratings in these categories are more consistent. In contrast, categories like "Business" and "Health & Fitness" show wider boxes, indicating more variability in how users rate apps in these categories.
-Several categories have a significant number of outliers, particularly on the lower side (ratings below 3), such as "Business", "Education", and "Health & Fitness". This could indicate that while many apps in these categories perform well, there are also a considerable number of apps that users are not satisfied with.
+Most categories have median ratings close to 4.0, suggesting a generally positive rating across the board.
+The boxes are mostly concentrated in the higher rating range (around 3.5 to 4.5), indicating overall good ratings across various categories.
+Categories like "Art & Design" and "Books & Reference" show less variability in ratings, as indicated by shorter boxes, meaning that ratings in these categories are more consistent.
+In contrast, categories like "Business" and "Health & Fitness" show wider boxes, indicating more variability in how users rate apps in these categories.
+Several categories have a significant number of outliers, particularly on the lower side (ratings below 3), such as "Business", "Education", and "Health & Fitness".
+This could indicate that while many apps in these categories perform well, there are also a considerable number of apps that users are not satisfied with.
 
 ```{r, fig.align='center'}
 # Create the box plot
@@ -545,11 +601,17 @@ ggplot(googleplaystore, aes(x = Category, y = log(Installs))) +
   theme(axis.text.x = element_text(size = 6, angle = 45, hjust = 1, vjust = 1))
 ```
 
-The plot shows a wide range of variability in installations across different categories. Categories like "Games" and "Family" show a broad range of installations, evident from the height of their boxes and whiskers, indicating a diverse set of app popularity within these categories. Most categories have their median log installations around the middle of the box, indicating a balanced distribution of data. However, some categories might show a skewed distribution if the median is closer to the top or bottom. Several categories exhibit numerous outliers, especially on the lower side (lower log install counts). This could indicate specific apps in these categories that are significantly less popular than the majority.
-
+The plot shows a wide range of variability in installations across different categories.
+Categories like "Games" and "Family" show a broad range of installations, evident from the height of their boxes and whiskers, indicating a diverse set of app popularity within these categories.
+Most categories have their median log installations around the middle of the box, indicating a balanced distribution of data.
+However, some categories might show a skewed distribution if the median is closer to the top or bottom.
+Several categories exhibit numerous outliers, especially on the lower side (lower log install counts).
+This could indicate specific apps in these categories that are significantly less popular than the majority.
 
 ### e) Sentiment dataset
-In the "googleplaystore_user_reviews" dataset, there are already pre-processed features indicating the Sentiment of the review, its polarity, and its subjectivity. Below we visualize the distributions of these features:
+
+In the "googleplaystore_user_reviews" dataset, there are already pre-processed features indicating the Sentiment of the review, its polarity, and its subjectivity.
+Below we visualize the distributions of these features:
 
 ```{r echo=FALSE, fig.align='center', fig.height = 9, fig.width=12}
 ##########################################
@@ -577,19 +639,24 @@ p2_p3_row <- arrangeGrob(p2, p3, ncol = 2)
 grid.arrange(p1_centered, p2_p3_row, nrow = 2)
 ```
 
-Hence, we observe that the majority of reviews have a positive sentiment, which suggests that users tend to leave reviews when they are happy / satisfied with the app. However the number of negative reviews is greater than the number of neutrals which might indicate that users are more likely to leave a review if they feel strongly (either positive or negative) as opposed to being indifferent about it.  
+Hence, we observe that the majority of reviews have a positive sentiment, which suggests that users tend to leave reviews when they are happy / satisfied with the app.
+However the number of negative reviews is greater than the number of neutrals which might indicate that users are more likely to leave a review if they feel strongly (either positive or negative) as opposed to being indifferent about it.
 
-The density plot for polarities are as expected, as negative sentiments are clustered around negative polarity values, neutral sentiments around 0, and positive sentiments are spread across positive values. 
+The density plot for polarities are as expected, as negative sentiments are clustered around negative polarity values, neutral sentiments around 0, and positive sentiments are spread across positive values.
 
-Finally the subjectivity plot shows that a large right skew for neutral sentiments, which suggests that neutral reviews tend to be more objective. Interestingly, both negative and positive sentiments seem to be centered around a positive subjectivity score of around 0.5, which suggests that these reviews are more subjective and opinion-based.
-
+Finally the subjectivity plot shows that a large right skew for neutral sentiments, which suggests that neutral reviews tend to be more objective.
+Interestingly, both negative and positive sentiments seem to be centered around a positive subjectivity score of around 0.5, which suggests that these reviews are more subjective and opinion-based.
 
 \newpage
+
 ## 5. What factors affect the number of installs an app receives?
 
 ### A. Data Preparation and Initial Investigation
 
 ```{r}
+##########################################
+# 5. A. Data Preparation and Initial Investigation
+##########################################
 installs_data <- googleplaystore |> na.omit()
 
 # The data is scraped from August 2018
@@ -606,8 +673,12 @@ x <- model.matrix(log_Installs ~ Reviews + Size  + Price + Days_Since_Update +
 y <- installs_data$log_Installs 
 ```
 
-Firstly, we eliminate all the null values. Then, we decided to create a new feature called "Days_Since_Update" as this may be more useful than just a specific date of update, and has the added advantage of being a numeric value. The original data was scraped in August 2018, with the latest update for an app being 8th August 2018. The original dataset had no specific day from which it was scraped, so we decided to use 15th August 2018 as an intermediary value, and calculated the different between this date and the "Last.Updated" to create the new feature. As we mention in the EDA section, we perform log transformation on the Installs variable. We result in a much more normal distribution after transformation.
-
+\quad Firstly, we eliminate all the null values.
+Then, we decided to create a new feature called "Days_Since_Update" as this may be more useful than just a specific date of update, and has the added advantage of being a numeric value.
+The original data was scraped in August 2018, with the latest update for an app being 8th August 2018.
+The original dataset had no specific day from which it was scraped, so we decided to use 15th August 2018 as an intermediary value, and calculated the different between this date and the "Last.Updated" to create the new feature.
+As we mention in the EDA section, we perform log transformation on the Installs variable.
+We result in a much more normal distribution after transformation.
 
 ```{r}
 ggplot(googleplaystore, aes(x = log(Installs))) +
@@ -618,10 +689,15 @@ ggplot(googleplaystore, aes(x = log(Installs))) +
 
 ### B. Analysis
 
-#### Lasso  
-We start with using Lasso model using dataset we prepare, and select the lambda using AICc. The lasso selected 37 explanatory variables and rejected 7 variables.
+#### Lasso
 
-```{r, include = TRUE, fig.height=4, fig.align='center'}
+<br /> We start with using Lasso model using dataset we prepare, and select the lambda using AICc.
+The lasso selected 37 explanatory variables and rejected 7 variables.
+
+```{r, include = TRUE, fig.height=4, fig.align='center', message=FALSE}
+##########################################
+# 5. B. i) LASSO
+##########################################
 library(gamlr)
 set.seed(1024)
 lasso_model <- gamlr(x, y, alpha = 1, nfolds = 100, type.measure = "mse")
@@ -652,7 +728,8 @@ kable(coefficients_df,
   kable_styling(bootstrap_options = c("striped", "hover"))
 ```
 
-The LASSO model analysis reveals distinct patterns regarding the impact of app categories and monetization strategies on app performance within the Google Play Store. Categories such as Entertainment, Education, Photography, Weather, and Shopping positively influence app performance, indicating high user engagement or downloads, with Entertainment apps showing the highest positive effect.
+The LASSO model analysis reveals distinct patterns regarding the impact of app categories and monetization strategies on app performance within the Google Play Store.
+Categories such as Entertainment, Education, Photography, Weather, and Shopping positively influence app performance, indicating high user engagement or downloads, with Entertainment apps showing the highest positive effect.
 
 Conversely, Medical, Events, Business, and Finance apps demonstrate negative impacts, suggesting challenges in user acceptance or market competition, particularly for Medical apps, which show the most significant negative influence.
 
@@ -664,12 +741,18 @@ These insights provide valuable guidance for app developers and marketers, empha
 print(paste("In-sample R^2:", summary_output$r2[best_aicc_index]))
 ```
 
-The value of 0.299 suggests a moderate level of explanatory power. This is neither particularly high nor low but indicates that while the model has captured a significant portion of the available explanatory information, there remains a substantial amount of variability that is not explained by the model. Despite not explaining more than half of the variance, the model could still be useful depending on the context and the complexity of the data. 
+The value of 0.299 suggests a moderate level of explanatory power.
+This is neither particularly high nor low but indicates that while the model has captured a significant portion of the available explanatory information, there remains a substantial amount of variability that is not explained by the model.
+Despite not explaining more than half of the variance, the model could still be useful depending on the context and the complexity of the data.
 
-#### Decision Tree  
+#### Decision Tree
+
 Next, we tried a decision tree model to predict log installs, setting the initial minimum node size to 1 and a minimum deviance requirement of 0.00001 to proceed with a new split.
 
 ```{r, fig.width=10, fig.align='center', fig.height=6}
+##########################################
+# 5. B. ii) Decision Tree
+##########################################
 clean_column_names <- function(data) {
     names(data) <- tolower(names(data))
     names(data) <- gsub("[^[:alnum:]_]", "_", names(data))
@@ -700,7 +783,12 @@ evaluate_tree_model <- function(model, x, y) {
 evaluate_tree_model(tree_model, x, y)
 ```
 
-The in-sample R² value of 0.9793926 and a Mean Squared Error (MSE) of 0.2809792  demonstrate strong performance of the model. An R² value close to 1, such as 0.9793926, indicates that the model explains approximately 97.9% of the variance within the training dataset, which points to a very good fit. Similarly, the low MSE corroborates the model's effectiveness, as it signifies a minimal average squared difference between the predicted and actual values, enhancing confidence in the model's predictive accuracy. However, the combination of a high R² value and the complex structure of our tree model could lead to concerns about overfitting, where the model might be too closely fitted to the nuances of the training data, potentially limiting its generalizability to new data. Additionally, the structure of the decision tree makes it difficult to interpret, which could obscure meaningful insights from the model. To mitigate these issues and enhance the model's robustness, 50-fold Cross Validation will be performed to appropriately prune the tree, aiming to simplify the model and improve its interpretive ease without sacrificing accuracy.
+The in-sample R² value of 0.9793926 and a Mean Squared Error (MSE) of 0.2809792 demonstrate strong performance of the model.
+An R² value close to 1, such as 0.9793926, indicates that the model explains approximately 97.9% of the variance within the training dataset, which points to a very good fit.
+Similarly, the low MSE corroborates the model's effectiveness, as it signifies a minimal average squared difference between the predicted and actual values, enhancing confidence in the model's predictive accuracy.
+However, the combination of a high R² value and the complex structure of our tree model could lead to concerns about overfitting, where the model might be too closely fitted to the nuances of the training data, potentially limiting its generalizability to new data.
+Additionally, the structure of the decision tree makes it difficult to interpret, which could obscure meaningful insights from the model.
+To mitigate these issues and enhance the model's robustness, 50-fold Cross Validation will be performed to appropriately prune the tree, aiming to simplify the model and improve its interpretive ease without sacrificing accuracy.
 
 ```{r, fig.align='center', fig.width=10}
 # Cross Validation
@@ -718,19 +806,28 @@ plot(pruned_tree)
 text(pruned_tree, pretty = 1)
 ```
 
-The decision tree's structure, which categorizes outputs based on the number of reviews, underscores the critical role of user reviews in influencing the model's predictions. This not only highlights the importance of this feature but also reflects how critical user engagement metrics are in predicting app performance.
+The decision tree's structure, which categorizes outputs based on the number of reviews, underscores the critical role of user reviews in influencing the model's predictions.
+This not only highlights the importance of this feature but also reflects how critical user engagement metrics are in predicting app performance.
 
 ```{r}
 evaluate_tree_model(pruned_tree, x, y)
 ```
 
-The pruned decision tree model exhibits a strong fit, as indicated by an in-sample R² of 0.8981282 from the cross-validation process. This value demonstrates that the model explains approximately 89.81% of the variance in the dependent variable, confirming its effectiveness in capturing the underlying relationships between the predictors and the response variable. However, the Mean Squared Error (MSE) has increased to 1.389012. While this still represents a relatively low error rate, the increase compared to earlier results suggests some variability in predictive accuracy when the model is subjected to different subsets of data. This could be indicative of a slight overfitting to the training data, where the model performs exceptionally well on training data but less consistently on unseen data.
+The pruned decision tree model exhibits a strong fit, as indicated by an in-sample R² of 0.8981282 from the cross-validation process.
+This value demonstrates that the model explains approximately 89.81% of the variance in the dependent variable, confirming its effectiveness in capturing the underlying relationships between the predictors and the response variable.
+However, the Mean Squared Error (MSE) has increased to 1.389012.
+While this still represents a relatively low error rate, the increase compared to earlier results suggests some variability in predictive accuracy when the model is subjected to different subsets of data.
+This could be indicative of a slight overfitting to the training data, where the model performs exceptionally well on training data but less consistently on unseen data.
 
-#### Random Forest  
-While the tree model is useful for interpretation, it can be improved upon when it comes
-to prediction with a random forest. A 50 tree forest yields the following important factors:
+#### Random Forest
+
+While the tree model is useful for interpretation, it can be improved upon when it comes to prediction with a random forest.
+A 50 tree forest yields the following important factors:
 
 ```{r eval=FALSE, include=FALSE}
+##########################################
+# 5. B. iii) Random Forest
+##########################################
 set.seed(5678)
 rf_model <- randomForest(y ~ ., data=x, importance = TRUE, ntree=50)
 ```
@@ -741,7 +838,6 @@ importance <- importance(installs_rf_model)  # Get importance
 importance_df <- data.frame(Feature = rownames(importance), Importance = importance[,1])  
 ```
 
-
 ```{r, fig.align='center'}
 ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
   geom_col(fill = "darkred") +
@@ -751,26 +847,32 @@ ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
   theme(axis.text.y = element_text(size = 6))  # Flip coordinates for easier reading of feature names
 ```
 
-Similarly with decision tree, the random forest model reveals that the number of reviews is the most significant determinant, indicating that user engagement, as measured by review volume, plays a pivotal role in app success. This suggests that apps with higher review counts likely see greater visibility and popularity, which significantly impacts the model's predictions.
+Similarly with decision tree, the random forest model reveals that the number of reviews is the most significant determinant, indicating that user engagement, as measured by review volume, plays a pivotal role in app success.
+This suggests that apps with higher review counts likely see greater visibility and popularity, which significantly impacts the model's predictions.
 
-Following reviews, the 'days_since_update' feature stands out as the second most important factor, highlighting the importance of recent updates in app performance. This feature's prominence suggests that apps regularly updated with new features or bug fixes tend to be favored by users, reflecting ongoing development commitment and app reliability.
+Following reviews, the 'days_since_update' feature stands out as the second most important factor, highlighting the importance of recent updates in app performance.
+This feature's prominence suggests that apps regularly updated with new features or bug fixes tend to be favored by users, reflecting ongoing development commitment and app reliability.
 
-Other notable features include app size, user ratings, and whether an app is free or paid. These aspects moderately influence app performance, with size and ratings likely affecting user download and retention decisions, and the app's type (paid or free) reflecting user purchasing behavior. Additionally, pricing and specific content ratings like 'everyone' and 'teen' show varying degrees of impact, indicating differences in target demographics and their preferences.
+Other notable features include app size, user ratings, and whether an app is free or paid.
+These aspects moderately influence app performance, with size and ratings likely affecting user download and retention decisions, and the app's type (paid or free) reflecting user purchasing behavior.
+Additionally, pricing and specific content ratings like 'everyone' and 'teen' show varying degrees of impact, indicating differences in target demographics and their preferences.
 
-The importance of various app categories such as 'finance', 'medical', 'sports', and 'game' also varies, which may reflect distinct market dynamics, user base sizes, and usage patterns inherent to each category. This differentiation underscores the need for developers to consider category-specific strategies when designing and marketing their apps.
+The importance of various app categories such as 'finance', 'medical', 'sports', and 'game' also varies, which may reflect distinct market dynamics, user base sizes, and usage patterns inherent to each category.
+This differentiation underscores the need for developers to consider category-specific strategies when designing and marketing their apps.
 
 ```{r}
 evaluate_tree_model(installs_rf_model, x, y)
 ```
 
-The results for the Random Forest model, featuring an in-sample R² value of 0.9829158 and a Mean Squared Error (MSE) of 0.2329418, illustrate its high predictive performance and accuracy. 
-
+The results for the Random Forest model, featuring an in-sample R² value of 0.9829158 and a Mean Squared Error (MSE) of 0.2329418, illustrate its high predictive performance and accuracy.
 
 ### C. Conclusion
-To evaluate the predictive performance of our three models, we divided our complete dataset into training and test sets using an 80:20 split. We then trained each model—LASSO, Pruned Decision Tree, and Random Forest—on the training data and assessed them on the test data to calculate the out-of-sample R² score. To minimize the effects of randomness, we repeated this process 20 times and collected the out-of-sample R² scores for each model. Our findings are summarized in the boxplot below:
+
+\quad To evaluate the predictive performance of our three models, we divided our complete dataset into training and test sets using an 80:20 split. We then trained each model—LASSO, Pruned Decision Tree, and Random Forest—on the training data and assessed them on the test data to calculate the out-of-sample R² score. To minimize the effects of randomness, we repeated this process 20 times and collected the out-of-sample R² scores for each model. Our findings are summarized in the boxplot below:
+
 ```{r}
 ##########################################
-# 6. C. Comparison and Conclusion
+# 5. C. Comparison and Conclusion
 ##########################################
 # Function to compute out of sample R2 for given models
 compute_OOS_R2 <- function(model, test_x, test_y) {
@@ -856,7 +958,7 @@ for (i in 1:20) {
 }
 ```
 
-```{r, fig.align="center"}
+```{r, fig.align="center", fig.height=4, fig.width=8}
 load("model_data/installs_results_df.RData")
 # Plot the results
 results_long <- pivot_longer(installs_results_df,
@@ -876,15 +978,16 @@ ggplot(results_long, aes(x = Model, y = R2, fill = Model)) +
     scale_x_discrete(labels = c("LASSO", "Pruned Tree", "Random Forest"))
 ```
 
-
 The boxplot shows that the LASSO model consistently achieves the lowest R² scores among the three models. Its median is below 0.2, indicating that it explains less than 20% of the variance in the dataset when used for prediction. The interquartile range (IQR) is tight, suggesting that the model's performance is quite stable across different splits of the data, but unfortunately, it is consistently low. The Pruned Decision Tree model has a slightly higher median R² score than the LASSO, hovering around 0.3, and a slightly wider IQR, which suggests more variability in performance. This increase in variability could be due to the model structure or the specific splits of the dataset. The Random Forest model outperforms both LASSO and the Pruned Decision Tree by a significant margin. Its median R² is close to 0.8, indicating it explains about 80% of the variance in the test data. The IQR is also relatively narrow, suggesting that this model performs robustly across different data splits. The whiskers, which extend close to the top of the plot, indicate that the lowest performance is still relatively high.
 
 Overall, the Random Forest model is the best performer in terms of out-of-sample predictive ability. Its high R² values suggest that it is the most reliable model for predicting the outcome variable.
-
-
+ 
 \newpage
+
 ## 6. What are the key features that influence an app's rating?
-App developers and key stakeholders often have an app's rating as an objective as this influences public perception of the app as well as attracting possible new users. So we decided to investigate our ability to predict an app's rating.
+
+\quad App developers and key stakeholders often have an app's rating as an objective as this influences public perception of the app as well as attracting possible new users.
+So we decided to investigate our ability to predict an app's rating.
 
 ### A. Data Preparation and Initial Investigation
 
@@ -915,13 +1018,13 @@ x <- model.matrix(Rating ~ log_Reviews + normalized_Size + log_Installs +
 y <- ratings_data$Rating  
 ```
 
-Firstly, we process the data by eliminating any rows where the rating is "NaN".      
-Secondly, we decided to create a new feature called "Days_Since_Update" as this may be more useful than just a specific date of update, and has the added advantage of being a numeric value. The original data was scraped in August 2018, with the latest update for an app being 8th August 2018. The original dataset had no specific day from which it was scraped, so we decided to use 15th August 2018 as an intermediary value, and calculated the different between this date and the "Last.Updated" to create the new feature.  
+Firstly, we process the data by eliminating any rows where the rating is "NaN".\
+Secondly, we decided to create a new feature called "Days_Since_Update" as this may be more useful than just a specific date of update, and has the added advantage of being a numeric value.
+The original data was scraped in August 2018, with the latest update for an app being 8th August 2018.
+The original dataset had no specific day from which it was scraped, so we decided to use 15th August 2018 as an intermediary value, and calculated the different between this date and the "Last.Updated" to create the new feature.\
 Finally, as we saw in the EDA, some of the numeric variables exhibited skewness, so we log transform Installs and Reviews, and normalize Reviews appropriately (we don't use a log transform here as some apps are listed as size 0).
 
-
-In addition we also pruned our features to ignore "App" (as app names have added value for our modelling purposes),
-"Current.Ver" and "Android.Ver" (as again one would assume that these versions hold no significant value on ratings).
+In addition we also pruned our features to ignore "App" (as app names have added value for our modelling purposes), "Current.Ver" and "Android.Ver" (as again one would assume that these versions hold no significant value on ratings).
 Out of the remaining categorical variables (Category, Type, Content.Rating, and Genres), we convert these to dummy variables using `model.matrix` which can then be fed into the models.
 
 This subsetted our data into 161 independent variables, and 1 dependent variable (the rating score).
@@ -933,15 +1036,19 @@ ggplot(ratings_data, aes(x = Rating)) +
   theme_minimal()
 ```
 
-By looking at the histogram of the ratings, it is interesting to observe that the greatest density of ratings is between 4 and 5, which suggests that most users tend to leave a positive rating. Surprisingly the distribution is very heavily skewed to the left, so there are very few ratings close to 1.
+By looking at the histogram of the ratings, it is interesting to observe that the greatest density of ratings is between 4 and 5, which suggests that most users tend to leave a positive rating.
+Surprisingly the distribution is very heavily skewed to the left, so there are very few ratings close to 1.
 
 It will be interesting to observe if our models are better at predicting high ratings correctly compared to low ratings.
 
 ### B. Analysis
-#### LASSO  
+
+#### LASSO 
+
+\
 We first fit a LASSO model using x and y prepared above, and select a lambda using the AICc.
 
-```{r, include = TRUE, fig.height=4, fig.align='center'}
+```{r, include = TRUE, fig.height=4, fig.align='center', message=FALSE}
 ##########################################
 # 6. B. i) LASSO
 ##########################################
@@ -954,6 +1061,7 @@ plot(lasso_model)
 Above we can see the regularization paths for the penalized $\beta$ and the minimum AICc selection marked.
 
 \singlespacing
+
 ```{r}
 # Find the index with lowest AICc
 summary_output = summary(lasso_model)
@@ -977,25 +1085,34 @@ kable(coefficients_df,
       row.names = FALSE) |>
   kable_styling(bootstrap_options = c("striped", "hover"))
 ```
+
 \doublespacing
 
-From looking at the coefficients with the largest positive and negative values, we observe that apps with the Genres: Board;Pretend Play, Comics;Creativity, Education;Creativity,all have strong positive association with higher ratings. This could suggest that apps with combined genres, and ones that promote creativity, play, and fun tend to be well-received by users and are could provide higher user-satisfaction
+From looking at the coefficients with the largest positive and negative values, we observe that apps with the Genres: Board;Pretend Play, Comics;Creativity, Education;Creativity,all have strong positive association with higher ratings.
+This could suggest that apps with combined genres, and ones that promote creativity, play, and fun tend to be well-received by users and are could provide higher user-satisfaction
 
-Interestingly, while the genre "education" seems to have a positive impact on rating , the genre "educational" appears to have the most negative impact in our model. This might suggest that apps related to education are polarizing to users, and they tend to either be satisfied and leave a high rating, or otherwise they do not meet user expectations and negatively influence the rating.
+Interestingly, while the genre "education" seems to have a positive impact on rating , the genre "educational" appears to have the most negative impact in our model.
+This might suggest that apps related to education are polarizing to users, and they tend to either be satisfied and leave a high rating, or otherwise they do not meet user expectations and negatively influence the rating.
 
 Also, another category of note is "Dating" which also has a large negative impact, and again this might be due to user dissatisfaction with the service, and makes sense considering the complicated and competitive nature of such apps.
 
-Finally, the number of installs also seems to be a feature of note (log_Installs) as it somewhat counter-intuitively negatively impacts ratings. This might be explained by the idea that more popular apps are used by a broader audience with diverse expectations, and thus receive more critical reviews.
+Finally, the number of installs also seems to be a feature of note (log_Installs) as it somewhat counter-intuitively negatively impacts ratings.
+This might be explained by the idea that more popular apps are used by a broader audience with diverse expectations, and thus receive more critical reviews.
 
 ```{r, include = TRUE}
 # Find the R2 of the lowest AICc slice
 best_r2 <- summary_output$r2[best_aicc_index]
 print(paste("In-sample R^2:", best_r2))
 ```
-The in-sample $R^2$ for the AICc slice of the LASSO path is $\approx$ 0.16, which suggests that this model is not a very good fit for our data and only about 16% of the variance in app ratings is explained by our predictors. This might suggest that the relationship between the features and ratings is not linear and more complex than this model can capture. So, next we aim to look at non linear models such as decision trees and random forests.
 
-#### Decision Tree  
+The in-sample $R^2$ for the AICc slice of the LASSO path is $\approx$ 0.16, which suggests that this model is not a very good fit for our data and only about 16% of the variance in app ratings is explained by our predictors.
+This might suggest that the relationship between the features and ratings is not linear and more complex than this model can capture.
+So, next we aim to look at non linear models such as decision trees and random forests.
+
+#### Decision Tree
+\
 We build a regression tree model using all the features from above.
+
 ```{r, fig.width=10, fig.align='center', fig.height=6}
 ##########################################
 # 6. B. ii) Decision Tree
@@ -1006,6 +1123,7 @@ tree_model <- tree(y ~ ., data=x, mindev=0.00001)
 
 plot(tree_model)
 ```
+
 ```{r}
 evaluate_tree_model <- function(model, x, y) {
     # Predict ratings using the tree model
@@ -1032,8 +1150,8 @@ evaluate_tree_model <- function(model, x, y) {
 evaluate_tree_model(tree_model, x, y)
 ```
 
-The dendogram for the chosen tree is as above, with labels of variables left out for clarity of visualization.  
-Looking at the $R^2$ score and mean square error, it is clear that the tree performs very well, however given that there are 1126 terminal nodes, it is very likely that overfitting is occuring, and the tree might not perform well out of sample.  
+The dendogram for the chosen tree is as above, with labels of variables left out for clarity of visualization.\
+Looking at the $R^2$ score and mean square error, it is clear that the tree performs very well, however given that there are 1126 terminal nodes, it is very likely that overfitting is occuring, and the tree might not perform well out of sample.\
 To address this, we prune the tree using cross-validation:
 
 ```{r, fig.align='center'}
@@ -1051,18 +1169,24 @@ pruned_tree <- prune.tree(tree_model, best=tree_size)
 plot(pruned_tree)
 text(pruned_tree, pretty = 1)
 ```
-The deviance for the cross-validated trees was minimal and the same for the number of leaves = 3 onwards.  
-So, choosing this as our best tree size, we obtain the tree as above. This has the added advantage of being more interpretable, as now the predictions only depend on two variables: Reviews and Installs.
 
-It is interesting to note that having more installs does not necessarily lead to a higher rating. As we see that in the left branch, having log_installs < 5.40989 (equivalent to a threshold of < 223.607 installs), leads to a higher predicted rating than otherwise. This aligns with our finding in the LASSO model above where log_installs had a significant negative coefficient.
+The deviance for the cross-validated trees was minimal and the same for the number of leaves = 3 onwards.\
+So, choosing this as our best tree size, we obtain the tree as above.
+This has the added advantage of being more interpretable, as now the predictions only depend on two variables: Reviews and Installs.
 
-Finally we also note that all the leaves of the pruned tree lie between 4.0 and 4.5, and this makes sense as this is where most of the ratings in our dataset lie (as seen on the histogram above). However this may mean that this model does not perform well when predicting lower ratings.
+It is interesting to note that having more installs does not necessarily lead to a higher rating.
+As we see that in the left branch, having log_installs \< 5.40989 (equivalent to a threshold of \< 223.607 installs), leads to a higher predicted rating than otherwise.
+This aligns with our finding in the LASSO model above where log_installs had a significant negative coefficient.
+
+Finally we also note that all the leaves of the pruned tree lie between 4.0 and 4.5, and this makes sense as this is where most of the ratings in our dataset lie (as seen on the histogram above).
+However this may mean that this model does not perform well when predicting lower ratings.
 
 ```{r}
 evaluate_tree_model(pruned_tree, x, y)
 ```
 
-The in-sample $R^2$ shows that when pruning the tree, we have sacrificed some explanation in variability. However the mean-squared error does not significantly increase which is a good sign.
+The in-sample $R^2$ shows that when pruning the tree, we have sacrificed some explanation in variability.
+However the mean-squared error does not significantly increase which is a good sign.
 
 ```{r, fig.align='center'}
 plot(x$log_reviews, x$log_installs, cex=exp(y)*.01,
@@ -1070,11 +1194,12 @@ plot(x$log_reviews, x$log_installs, cex=exp(y)*.01,
 abline(v=8.65146, col=4, lwd=2)
 lines(x=c(0,8.65146), y=c(5.40989,5.40990), col=4, lwd=2)
 ```
+
 The pruned tree splits the data in the feature space as visualized above, where the point size is proportional to their rating.
 
 Finally, in order to try and improve upon the tree model, we turn to random forests.
 
-#### Random Forest  
+#### Random Forest
 
 ```{r eval=FALSE, include=FALSE}
 ##########################################
@@ -1087,17 +1212,21 @@ rf_model <- randomForest(y ~ ., data=x, importance = TRUE, ntree=50)
 load("model_data/rf_model.RData")
 ```
 
-
 ```{r}
 evaluate_tree_model(rf_model, x, y)
 ```
 
-It is clear to see that this model fits the dataset the best, with an in sample $R^2$ of $\approx$ 0.75. This is expected as Random Forests are essentially a type of "model averaging" algorithm which are very flexible. However, we lose the interpretability of a single decision tree.
+It is clear to see that this model fits the dataset the best, with an in sample $R^2$ of $\approx$ 0.75.
+This is expected as Random Forests are essentially a type of "model averaging" algorithm which are very flexible.
+However, we lose the interpretability of a single decision tree.
 
 Despite this, we can still look at the variable importance of each feature, which is measured when constructing the model:
 
+```{=tex}
 \vspace{0.5cm}
 \singlespacing
+```
+
 ```{r, fig.align="center", fig.width=10, fig.height = 6}
 kable(head(importance(rf_model), n = 10),
       caption = "Variable Importances from Random Forest",
@@ -1106,14 +1235,19 @@ kable(head(importance(rf_model), n = 10),
 
 varImpPlot(rf_model)
 ```
+
 \doublespacing
 
-Interestingly, the top features ranked in terms of importance for both mean squared error and node purity are numerical features as opposed to categorical ones: Reviews, Installs, Size, Days since Last Update, and Price. This is was not apparent when fitting a LASSO model or a simple decision tree. However the two most important variables for MSE (log_reviews, and log_installs) are consistent with the main splitting features selected by the pruned decision tree earlier.
+Interestingly, the top features ranked in terms of importance for both mean squared error and node purity are numerical features as opposed to categorical ones: Reviews, Installs, Size, Days since Last Update, and Price.
+This is was not apparent when fitting a LASSO model or a simple decision tree.
+However the two most important variables for MSE (log_reviews, and log_installs) are consistent with the main splitting features selected by the pruned decision tree earlier.
 
+### C. Conclusion
 
-### C. Comparison and Conclusion
-
-To assess the predictive ability of our three models, we randomly split our full dataset into training and test data (in an 80:20 split). We then train each of our three models (LASSO, Pruned Decision Tree, Random Forest), on our training data, and evaluate them on the test data to compute the out of sample $R^2$ score. To mitigate any randomness we repeat this process 20 times and collect the out of sample $R^2$ for each model. Our findings our summarised in the boxplot below:
+To assess the predictive ability of our three models, we randomly split our full dataset into training and test data (in an 80:20 split).
+We then train each of our three models (LASSO, Pruned Decision Tree, Random Forest), on our training data, and evaluate them on the test data to compute the out of sample $R^2$ score.
+To mitigate any randomness we repeat this process 20 times and collect the out of sample $R^2$ for each model.
+Our findings our summarised in the boxplot below:
 
 ```{r}
 ##########################################
@@ -1207,7 +1341,6 @@ for (i in 1:20) {
 load("model_data/results_df.RData")
 ```
 
-
 ```{r, fig.align="center"}
 # Plot the results
 results_long <- pivot_longer(results_df,
@@ -1226,26 +1359,455 @@ ggplot(results_long, aes(x = Model, y = R2, fill = Model)) +
     theme_minimal() +
     scale_x_discrete(labels = c("LASSO", "Pruned Tree", "Random Forest"))
 ```
-So it is clear to see that our pruned decision tree performs the worst on unseen data, but LASSO and Random Forest perform relatively well. 
-This makes sense as decision trees, even when pruned, are highly sensitive to initial data and are prone to over-fitting so they are not very predictors for unseen applications. Our linear model with LASSO regularization, and penalty parameter chosen by the AICc performs moderately well, but also has a tight interquartile range which indicates stable performance across the test sets which may be desirable in some cases. However the best model is Random Forests, with the highest median OOS $R^2$ of 0.17308. Although this model does have a broader range of values, which suggests it might be sensitive on the initial data split, it reaches the highest R^2 values.
 
-Thus overall, as a predictor for the rating, our analysis shows that the Random Forest model is the most capable in terms of maximum potential performance. However potential developers and stakeholders using such a model would have to be wary of the higher variability in the model, and the lack of interpretability compared to other models. This is consistent with results in the literature where Random Forest models have time again proved to good machine learning models for prediction due to their flexibility and ability to capture complex patterns in data.
+So it is clear to see that our pruned decision tree performs the worst on unseen data, but LASSO and Random Forest perform relatively well.
+This makes sense as decision trees, even when pruned, are highly sensitive to initial data and are prone to over-fitting so they are not very predictors for unseen applications.
+Our linear model with LASSO regularization, and penalty parameter chosen by the AICc performs moderately well, but also has a tight interquartile range which indicates stable performance across the test sets which may be desirable in some cases.
+However the best model is Random Forests, with the highest median OOS $R^2$ of 0.17308.
+Although this model does have a broader range of values, which suggests it might be sensitive on the initial data split, it reaches the highest R\^2 values.
+
+Thus overall, as a predictor for the rating, our analysis shows that the Random Forest model is the most capable in terms of maximum potential performance.
+However potential developers and stakeholders using such a model would have to be wary of the higher variability in the model, and the lack of interpretability compared to other models.
+This is consistent with results in the literature where Random Forest models have time again proved to good machine learning models for prediction due to their flexibility and ability to capture complex patterns in data.
 
 However one should also be wary that all these models are sensitive to hyper parameters, and often in practice further analysis is required to consider feature engineering and hyper parameter tuning to obtain the best possible model.
 
 \newpage
+
 ## 7. How does user sentiment in reviews correlate with app ratings?
+
+\quad User sentiment in reviews plays a pivotal role in determining an app's rating, significantly influencing public perception and potential users' decisions.
+Understanding the intricate relationship between user sentiment and app ratings not only aids in enhancing the app's features but also serves as a crucial gauge of user satisfaction and engagement.
+Consequently, our investigation centers on intricately examining how sentiment expressed in user reviews, measured through factors such as sentiment polarity and subjectivity, correlates with the overall app ratings.
+This analytical approach offers valuable insights into user preferences and pain points, empowering developers to refine their applications to better align with user expectations and elevate the overall user experience.
+Through meticulous analysis of sentiment data, our objective is to uncover discernible patterns that can forecast the impact of user reviews on app ratings, thereby providing strategic guidance for improvements and marketing endeavors.
+
 ### A. Introduction
+
+\quad In our examination of the `googleplaystore_user_reviews` dataset, we've curated relevant data to delve into the dynamics among `reviews`, `sentiment`, `sentiment_polarity`, and `sentiment_subjectivity`.
+Firstly, we'll analyze the dataset to identify the top 20 words that have the most significant impact on sentiment, exploring their effects within the categories of `positive`, `neutral`, and `negative` sentiment.
+Secondly, we'll investigate the correlations among `sentiment`, `sentiment_polarity`, and `sentiment_subjectivity`, conducting analyses on subsets of data categorized by sentiment to delve deeper into these relationships.
+Lastly, in our third model, we plan to introduce sentiment analysis packages to recalibrate the emotional value of each review.
+By leveraging this numerical representation, we'll enhance the dataset and treat it as a variable to further explore the relationships among `sentiment`, `sentiment_polarity`, and `sentiment_subjectivity`.
+Utilizing the `glm` function, we'll determine relevant coefficients and provide comprehensive explanations, aiming to gain a more holistic understanding of the dynamic nature of sentiment in reviews.
+
+\newpage
+
 ### B. Analysis
-#### Model 1.
-#### Model 2.
-#### Model 3.
+
+#### Top 20 Words in Each Sentiment
+\
+By preprocessing the text and extracting the most frequent words associated with different sentiments (positive, neutral, and negative), we aim to gain insights into the overall sentiment distribution and key themes present in the reviews.
+This analysis is valuable for understanding customer perceptions and experiences with the Google Play Store apps.
+Additionally, visualizing the top words for each sentiment category provides a clear and concise representation of the most common sentiments expressed by users.
+We anticipate observing distinct patterns and trends in the words used across different sentiment categories, which can inform app developers and stakeholders about areas for improvement and potential strengths of their apps.
+Ultimately, this analysis helps to enhance our understanding of user sentiment and preferences, enabling us to make data-driven decisions to optimize app performance and user satisfaction.
+
+```{r, echo=FALSE}
+##########################################
+# 7. B. i) Top 20 Words in Each Sentiment  
+##########################################
+# Load the dataset
+data <- googleplaystore_user_reviews
+
+# Preprocess the text: remove punctuation, convert to lowercase, remove stopwords
+data_clean <- data |>
+  mutate(Review_Text = tolower(Translated_Review)) |>
+  mutate(Review_Text = gsub("[[:punct:]]", "", Review_Text))
+
+# Tokenize the text
+data_tokens <- data_clean |>
+  unnest_tokens(word, Review_Text)
+
+# Remove stopwords
+data_tokens <- data_tokens |>
+  anti_join(stop_words, by = "word")
+
+# Function to get top N words for a given sentiment
+get_top_words <- function(data, sentiment, n = 20) {
+  data |>
+    filter(Sentiment == sentiment) |>
+    count(word, sort = TRUE) |>
+    slice_max(order_by = n, n = n) |>
+    arrange(desc(n))
+}
+
+# Get top 20 words for each sentiment
+top_words_positive <- get_top_words(data_tokens, "Positive")
+top_words_neutral <- get_top_words(data_tokens, "Neutral")
+top_words_negative <- get_top_words(data_tokens, "Negative")
+
+# Function to plot top words
+plot_top_words <- function(top_words, sentiment) {
+  ggplot(top_words, aes(x = reorder(word, n), y = n)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() +
+    labs(title = paste("Top 20 Words in", sentiment, "Reviews"),
+         x = "Words",
+         y = "Frequency")
+}
+
+```
+
+**Positive Sentiment**\
+\quad The bar chart representing positive app reviews highlights prevalent themes of enjoyment and functionality, with words like `game,` `love,` `fun,` and `easy` indicating user satisfaction and pleasure.
+Additionally, terms such as `update` and `phone` suggest positive feedback on app updates and compatibility, enhancing user satisfaction.
+These insights imply that positive reviews often stem from users finding engaging or useful features in the apps, particularly in gaming or functional applications.
+
+```{r echo=FALSE, fig.align='center', fig.height = 3, fig.width=4}
+plot_top_words(top_words_positive, "Positive")
+```
+
+**Neutral Sentiment**\
+\quad In neutral reviews, practical concerns and minor issues are apparent, as indicated by words like `update,` `account,` and `option.` The presence of terms such as `money` and `ads` suggests neutrality based on app monetization strategies or advertising presence, which neither significantly pleases nor annoys users.
+These reviews often focus on specific features or issues needing improvement but are not necessarily dissatisfying enough to be negative.
+
+```{r echo=FALSE, fig.align='center', fig.height = 3, fig.width=4}
+plot_top_words(top_words_neutral, "Neutral")
+```
+
+**Negative Sentiment**\
+\quad Negative app reviews center around frustration and problems, with words like `bad,` `annoying,` and `worst` expressing dissatisfaction.
+Terms such as `update,` `ads,` and `money` indicate negative experiences, likely related to intrusive ads, poor updates, or perceived poor value for money.
+The presence of `fix` suggests users are encountering bugs or glitches that negatively impact their app experience.
+
+```{r echo=FALSE, fig.align='center', fig.height = 3, fig.width=4}
+plot_top_words(top_words_negative, "Negative")
+```
+
+#### Regression Analysis
+\
+\quad Based on exploratory data analysis (EDA), we can observe the following insights.
+Firstly, positive and negative comments tend to be more subjective, as they may stem from personal experiences and emotions, while neutral comments are generally more objective, focusing on features without strong emotional content.
+Secondly, developers and marketers can glean guidance from these charts; understanding polarity helps identify the pros and cons of comments, guiding customer service responses, while comprehending subjectivity aids in distinguishing types of feedback, guiding product improvements and feature development.
+To better ascertain the effectiveness of these comments, it's essential to probe `sentiment_polarity` and `sentiment_subjectivity` within each sentiment category.
+
+```{r,echo=FALSE}
+##########################################
+# 7. B. ii) Regression Analysis
+##########################################
+
+# Separate the data using filter
+data_positive <- data |> filter(Sentiment == "Positive")
+data_neutral <- data |> filter(Sentiment == "Neutral")
+data_negative <- data |> filter(Sentiment == "Negative")
+
+# Summary statistics for positive sentiment
+positive_polarity = unclass(summary(data_positive$Sentiment_Polarity))
+positive_subjectivity = unclass(summary(data_positive$Sentiment_Subjectivity))
+
+# Summary statistics for neutral sentiment
+neutral_polarity = unclass(summary(data_neutral$Sentiment_Polarity))
+neutral_subjectivity = unclass(summary(data_neutral$Sentiment_Subjectivity))
+
+# Summary statistics for negative sentiment
+negative_polarity = unclass(summary(data_negative$Sentiment_Polarity))
+negative_subjectivity = unclass(summary(data_negative$Sentiment_Subjectivity))
+
+# Combine all into a data frame
+df_stats <- data.frame(
+  Row = c("Min.", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max."),
+  "Positive Sentiment Polarity" = unname(positive_polarity),
+  "Positive Sentiment Subjectivity" = unname(positive_subjectivity),
+  "Neutral Sentiment Polarity" = unname(neutral_polarity),
+  "Neutral Sentiment Subjectivity" = unname(neutral_subjectivity),
+  "Negative Sentiment Polarity" = unname(negative_polarity),
+  "Negative Sentiment Subjectivity" = unname(negative_subjectivity)
+)
+
+# Transpose the data frame
+transposed_df <- as.data.frame(t(df_stats))
+colnames(transposed_df) <- transposed_df[1, ]
+transposed_df <- transposed_df[-1, ]
+
+# Output the table
+# kable(df_stats, caption = "Summary Statistics for Different Sentiment Categories", align = 'c')
+kable(df_stats, format="latex",  booktabs=TRUE, , caption = "Summary Statistics for Different Sentiment Categories", align = 'c') |>
+  kable_styling(latex_options="scale_down")
+```
+
+The coefficient for Sentiment_Subjectivity is 0.601763, indicating a strong positive relationship with Sentiment_Polarity.
+This suggests that as subjectivity in positive reviews increases, the polarity also tends to be more positive.
+The model explains about 21.32% of the variance in sentiment polarity (Adjusted R-squared: 0.2132), which is moderate but significant, indicating that while other factors also affect polarity, subjectivity is an important predictor.
+
+```{r, echo=FALSE, comment=NA}
+# Apply linear model for positive sentiment
+lm_positive <- lm(Sentiment_Polarity ~ Sentiment_Subjectivity, data = data_positive)
+summary(lm_positive)
+```
+
+The coefficient for Sentiment_Subjectivity is -0.578264, showing a significant negative relationship with Sentiment_Polarity in negative reviews.
+This suggests that higher subjectivity in negative reviews correlates with more negative polarity.
+The model explains about 27.99% of the variance in sentiment polarity (Adjusted R-squared: 0.2799), which is somewhat higher than in positive reviews, indicating a slightly stronger influence of subjectivity on polarity in negative contexts.
+
+```{r, echo=FALSE, comment=NA}
+# Apply linear model for negative sentiment
+lm_negative <- lm(Sentiment_Polarity ~ Sentiment_Subjectivity, data = data_negative)
+summary(lm_negative)
+```
+
+\newpage 
+
+Positive Sentiment Model Plots:
+
+```{r echo=FALSE, fig.align='center', fig.width=6}
+par(mfrow = c(2, 2))
+plot(lm_positive)
+```
+
+Negative Sentiment Model Plots:
+
+```{r echo=FALSE, fig.align='center', fig.width=6}
+par(mfrow = c(2, 2))
+plot(lm_negative)
+```
+
+\newpage
+Residuals vs Fitted Plots: Both models show some patterns in residuals, which could indicate non-linearity or other underlying effects not captured by the model.
+There's no apparent funnel shape, which suggests homoscedasticity (constant variance of errors).
+
+Q-Q Plots: The plots for both models indicate some deviation from normality, especially at the tails.
+This suggests that the residuals are not perfectly normally distributed, which could impact inference from the model.
+
+Scale-Location Plots: The spread of residuals in these plots is fairly constant, supporting the assumption of equal variances across fitted values.
+
+Residuals vs Leverage Plots: There are a few influential points, as indicated by Cook's distance lines, but they do not appear to unduly influence the model's overall fit.
+
+The linear models for both positive and negative sentiments show that subjectivity is a significant predictor of sentiment polarity, with subjectivity having a positive impact in positive reviews and a negative impact in negative reviews.
+The diagnostic checks reveal some concerns with normality and potential influence from a few data points, but overall, the models are robust and provide valuable insights.
+
+Given the evidence of some non-linearity and potential outliers, it may be beneficial to explore more complex models or transformations of variables.
+Non-linear models or the inclusion of interaction terms could better capture the underlying dynamics of the data.
+Additionally, considering the substantial proportion of variance unexplained by the models, incorporating additional predictors could enhance the models' explanatory power.
+
+Overall, these findings highlight the nuanced role of subjectivity in shaping user perceptions expressed in reviews.
+By acknowledging these dynamics, businesses can better understand the underpinnings of user feedback and refine their strategies for addressing user concerns and enhancing overall user experience.
+
+#### Enumerating Sentiment Scores
+\
+\quad Enumerating sentiment scores from text is a crucial method that converts subjective elements of language into numerical data, facilitating a deeper and more structured understanding of textual content.
+This approach enables quantifying sentiment trends over time, comparing sentiment across different groups, and tracking changes in response to events.
+By computing sentiment scores, we engage in quantitative analysis, enhancing decision-making processes, improving products, adjusting marketing strategies, and elevating customer service based on feedback sentiment.
+Furthermore, the automation and scalability of sentiment scoring enable efficient handling of large text volumes, benefiting applications like social media monitoring, market research, and customer feedback analysis.
+Additionally, sentiment scoring captures subtle nuances in sentiment expression that may be overlooked in broader analyses, and analyzing scores at the sentence level provides contextual insights, leading to more accurate interpretations of overall sentiment trends.
+
+```{r, echo= FALSE, fig.align='center', fig.width=7, fig.height=3}
+##########################################
+# 7. B. iii) Enumerating Sentiment Scores
+##########################################
+
+data_positive <- filter(data, Sentiment == "Positive")
+data_neutral <- filter(data, Sentiment == "Neutral")
+data_negative <- filter(data, Sentiment == "Negative")
+
+# Load AFINN sentiment lexicon
+afinn <- get_sentiments("afinn")
+
+# Function to process and calculate scores
+calculate_scores <- function(df) {
+  df |>
+    unnest_tokens(word, Translated_Review) |> # Tokenizing the text
+    mutate(word = tolower(word)) |>           # Convert words to lower case
+    inner_join(afinn, by = "word") |>         # Join with AFINN lexicon
+    group_by(Sentiment) |>
+    summarize(average_score = mean(value, na.rm = TRUE), .groups = 'drop') # Calculate mean sentiment score
+}
+
+# Calculate scores for each sentiment dataset
+positive_scores <- calculate_scores(data_positive)
+neutral_scores <- calculate_scores(data_neutral)
+negative_scores <- calculate_scores(data_negative)
+
+# Combining all scores into one data frame for plotting
+all_scores <- bind_rows(
+  positive_scores |> mutate(Sentiment = "Positive"),
+  neutral_scores |> mutate(Sentiment = "Neutral"),
+  negative_scores |> mutate(Sentiment = "Negative")
+)
+# Plotting the average sentiment scores
+ggplot(all_scores, aes(x = Sentiment, y = average_score, fill = Sentiment)) +
+  geom_col() +
+  labs(title = "Average Sentiment Scores by Category",
+       x = "Sentiment Category",
+       y = "Average Score") +
+  theme_minimal()
+```
+
+The presented plot serves as a comprehensive visualization illustrating the average sentiment scores across different sentiment categories, namely Negative, Neutral, and Positive.
+Through this visual representation, we glean valuable insights into the nuanced sentiment dynamics inherent within each category.
+Notably, positive reviews emerge with a notably elevated average score, indicative of the predominantly favorable sentiments expressed within this segment.
+In contrast, neutral reviews gravitate towards a sentiment score hovering around the neutral midpoint, suggesting a balance between positive and negative sentiments or a lack of strong emotional expression.
+Conversely, negative reviews exhibit an average score situated below zero, underscoring the prevalence of adverse sentiments within this segment.
+This graphical depiction provides compelling evidence of the efficacy of the sentiment scoring mechanism in accurately discerning and quantifying the diverse spectrum of sentiments encapsulated within each category, thereby offering a robust foundation for subsequent analytical endeavors and informed decision-making processes.
+
+\newpage
+
+```{r, fig.align='center', fig.width=10}
+library(ggplot2)
+
+# Assuming 'data_scored' has been created, if not, follow similar steps as before
+data_scored <- data %>%
+  unnest_tokens(word, Translated_Review) %>%
+  mutate(word = tolower(word)) %>%
+  inner_join(afinn, by = "word") %>%
+  group_by(App, Sentiment, Sentiment_Polarity, Sentiment_Subjectivity) %>%
+  summarize(sentiment_score = mean(value, na.rm = TRUE), .groups = 'drop')
+
+# Scatter plot for Sentiment Score vs. Polarity
+a1 <- ggplot(data_scored, aes(x = Sentiment_Polarity, y = sentiment_score, color = Sentiment)) +
+  geom_point(alpha = 0.6) +
+  labs(title = "Sentiment Score vs. Polarity", x = "Sentiment Polarity", y = "Sentiment Score")
+
+# Scatter plot for Sentiment Score vs. Subjectivity
+a2 <- ggplot(data_scored, aes(x = Sentiment_Subjectivity, y = sentiment_score, color = Sentiment)) +
+  geom_point(alpha = 0.6) +
+  labs(title = "Sentiment Score vs. Subjectivity", x = "Sentiment Subjectivity", y = "Sentiment Score")
+
+grid.arrange(a1, a2, ncol = 2)
+```
+
+These scatter plots serve to illustrate the connection between computed sentiment scores and their corresponding polarity and subjectivity.
+Across various levels of polarity and subjectivity, the plots reveal a diverse distribution of sentiment scores.
+Notably, concerning polarity, a discernible correlation emerges, indicating that elevated polarity tends to align with more positive sentiment scores, while diminished polarity correlates with more negative sentiment scores.
+However, when examining subjectivity, the relationship appears less defined, implying that subjectivity alone may not wield significant predictive power over sentiment scores.
+These visualizations offer valuable insights into the nuanced interplay between sentiment attributes, informing a deeper comprehension of sentiment dynamics within the dataset.
+
+\newpage
+
+```{r, fig.align='center', fig.height=3}
+# Calculate correlation matrix
+cor_matrix <- cor(data_scored[, c("sentiment_score", "Sentiment_Polarity", "Sentiment_Subjectivity")], use = "complete.obs")
+colnames(cor_matrix) <- c("Score", "Polarity", "Subjectivity")
+rownames(cor_matrix) <- c("Score", "Polarity", "Subjectivity")
+
+
+# Plot the correlation matrix
+corrplot(cor_matrix, method = "color", 
+         tl.col = "black",           
+         tl.srt = 45,                
+         tl.cex = 0.8,               
+         number.cex = 0.7)
+```
+
+\quad The heatmap provides a comprehensive overview of the correlations among sentiment score, sentiment polarity, and sentiment subjectivity, indicating the strength of their relationships through varying color intensities.
+Notably, it illustrates a significant positive correlation between sentiment score and sentiment polarity, suggesting that as polarity becomes more positive, sentiment scores tend to increase accordingly.
+Conversely, the correlation between sentiment score and sentiment subjectivity appears weaker, implying that while subjectivity influences sentiment, its impact on overall sentiment scores may be less pronounced.
+This visualization offers valuable insights into the complex interplay of sentiment attributes, aiding in a deeper understanding of sentiment dynamics within the dataset and guiding more informed decision-making processes.
+
+\newpage
+
+In employing the linear regression model, we first identify a set of predictor variables that we believe may influence the outcome variable of interest, which in this case is sentiment polarity.
+These predictors could include sentiment scores, subjectivity levels, and other relevant features extracted from textual data.
+We then train the model using a dataset where sentiment polarity is known, allowing the model to learn the relationship between the predictors and the target variable.
+Once trained, we validate the model's performance using separate validation data, ensuring its ability to generalize to unseen data.
+Through this process, we gain insights into how different factors contribute to sentiment polarity, enabling us to understand the nuanced dynamics of sentiment expression and potentially informing strategies for sentiment modification or more refined sentiment analysis.
+
+```{r,echo=FALSE, include=FALSE, comment=NA}
+# Load AFINN sentiment lexicon
+afinn <- get_sentiments("afinn")
+
+# Modified function to calculate sentiment scores and return detailed dataframe
+calculate_scores <- function(df) {
+  df %>%
+    unnest_tokens(word, Translated_Review) %>%  # Tokenizing the text
+    mutate(word = tolower(word)) %>%           # Convert words to lower case
+    inner_join(afinn, by = "word") %>%
+    group_by(Sentiment, App, Sentiment_Polarity, Sentiment_Subjectivity) %>%
+    summarize(sentiment_score = mean(value, na.rm = TRUE), .groups = 'drop')
+}
+
+# Applying function to each sentiment dataset
+data_positive_scored <- calculate_scores(filter(data, Sentiment == "Positive"))
+data_negative_scored <- calculate_scores(filter(data, Sentiment == "Negative"))
+
+# Ensure data is available for modeling
+data_positive_scored <- data_positive_scored %>% ungroup() %>% distinct()
+data_negative_scored <- data_negative_scored %>% ungroup() %>% distinct()
+
+
+# Linear model for positive reviews
+lm_positive <- lm(Sentiment_Polarity ~ Sentiment_Subjectivity + sentiment_score, data = data_positive_scored)
+
+# Linear model for negative reviews
+lm_negative <- lm(Sentiment_Polarity ~ Sentiment_Subjectivity + sentiment_score, data = data_negative_scored)
+```
+
+```{r, echo=FALSE, comment=NA}
+# Summarize the models
+summary(lm_positive)  # Model for positive reviews
+```
+
+The linear model for positive sentiments reveals a strong positive correlation between sentiment subjectivity and polarity, suggesting that more subjective positive reviews tend to exhibit stronger positive sentiments.
+This association is reinforced by the significant positive coefficient for sentiment scores, indicating their contribution to higher polarity values.
+The model's explanatory power, represented by the Adjusted R-squared of 0.3633, implies that approximately 36.33% of the variation in sentiment polarity is accounted for by the predictors.
+Both Sentiment_Subjectivity and sentiment_score play significant roles, with positive coefficients of 0.465701 and 0.079301, respectively, affirming their influence on sentiment polarity.
+Despite the model's overall goodness of fit, potential outliers or high-leverage points suggest the need for further robustness checks or alternative model considerations to enhance accuracy and interpretation.
+
+```{r, echo=FALSE, comment=NA}
+summary(lm_negative)  # Model for negative reviews
+```
+
+The negative sentiment model reveals a negative coefficient (-0.491287) for sentiment subjectivity, indicating an inverse relationship between subjectivity and sentiment polarity in negative reviews; more subjective negative reviews tend to have less negative polarity.
+Conversely, the coefficient for sentiment scores is positive (0.063526), suggesting that even within negative reviews, higher usage of negative words (higher sentiment scores) correlates with less negative polarity.
+The model exhibits slightly higher explanatory power than the positive sentiment model, with an adjusted R-squared value of 0.4239, indicating that approximately 42.39% of the variance in sentiment polarity is explained by the predictors.
+This linear model uncovers an intriguing negative relationship between sentiment subjectivity and polarity in negative sentiments, suggesting that more subjective negative reviews often have less negative polarity, perhaps reflecting nuanced criticism or emotional content that does not translate directly into straightforward negativity.
+The positive coefficient for sentiment scores aligns with this trend, as lower negative scores correlate with higher polarity values.
+The model explains a substantial portion of the variability, as indicated by the R-squared value.
+
+```{r echo=FALSE, fig.align='center', fig.height=3, fig.width=6}
+# Visualization for Positive Reviews
+ggplot(data_positive_scored, aes(x = Sentiment_Subjectivity, y = Sentiment_Polarity, color = sentiment_score)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, formula = y ~ x) +
+  labs(title = "Polarity vs. Subjectivity in Positive Reviews",
+       x = "Sentiment Subjectivity", y = "Sentiment Polarity")
+```
+
+\quad This scatter plot visually reinforces the findings from the linear model, displaying a clear positive trend between sentiment subjectivity and polarity among positive reviews.
+The density of points increases as subjectivity and polarity rise, supporting the notion that highly subjective positive reviews are often more emphatically positive.
+The color gradient representing sentiment scores shows that higher scores generally coincide with higher polarity, aligning with the model's coefficients.
+This plot effectively illustrates the positive relationship and provides a visual confirmation of the statistical findings, highlighting the consistency across different data representation methods.
+
+```{r echo=FALSE, fig.align='center', fig.height=3, fig.width=6}
+# Visualization for Negative Reviews
+ggplot(data_negative_scored, aes(x = Sentiment_Subjectivity, y = Sentiment_Polarity, color = sentiment_score)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, formula = y ~ x) +
+  labs(title = "Polarity vs. Subjectivity in Negative Reviews",
+       x = "Sentiment Subjectivity", y = "Sentiment Polarity")
+```
+
+\quad Contrasting with the positive reviews, the scatter plot for negative reviews shows a negative trend, where increased subjectivity correlates with higher polarity, suggesting a decrease in negativity.
+This plot visually supports the negative coefficient for subjectivity found in the linear model and illustrates how subjective negative reviews often express criticisms that are less harsh in terms of sentiment polarity.
+The plot also reveals a broad spread of sentiment scores across different levels of subjectivity, suggesting a complex interaction between these factors in shaping the sentiment expressed in negative reviews.
+This complexity is crucial for understanding how different aspects of sentiment interact in user feedback and underscores the need for nuanced analysis in handling negative reviews.
+
 ### C. Conclusion
 
-\newpage
-## 8. Conclusion
+Across all sentiments, common words like "app," "update," and "phone" indicate their central role in user reviews, regardless of sentiment.
+Positive reviews tend to emphasize enjoyment and utility, neutral reviews discuss functionality and minor concerns, while negative reviews highlight faults and negative experiences.
+Developers can prioritize areas for improvement and enhance user satisfaction by understanding these themes, adjusting features, or strategies based on the most frequent criticisms or praises.
+This underscores the importance of monitoring user feedback to drive better user experiences and app development.
+
+In the basic regression model, the analysis of the Positive Sentiment Linear Model reveals a significant positive correlation between Sentiment_Subjectivity and Sentiment_Polarity, indicating that increased subjectivity in positive reviews generally correlates with more positive expressions of sentiment.
+This model accounts for approximately 21.32% of the variance in sentiment polarity, suggesting that while subjectivity is notable, other variables also influence sentiment in positive reviews.
+Conversely, the Negative Sentiment Linear Model demonstrates a significant negative relationship between Sentiment_Subjectivity and Sentiment_Polarity, suggesting that higher subjectivity in negative reviews tends to be associated with more intensely negative sentiments.
+This model explains about 27.99% of the variance in sentiment polarity, slightly higher than in the positive model, indicating a stronger influence of subjectivity on sentiment polarity in negative reviews.
+These findings underscore the importance of subjectivity in shaping sentiment expressions, with its impact manifesting differently across positive and negative contexts, offering valuable insights for businesses seeking to understand and respond to customer feedback effectively.
+
+Moreover, by introducing a new parameter, sentiment scores, and examining the relationship among the variables, the analysis unveils distinct dynamics in how subjectivity and computed sentiment scores influence the polarity of positive versus negative reviews.
+Positive reviews exhibit a reinforcing effect, where both subjectivity and positive sentiment scores push polarity higher.
+Conversely, in negative reviews, increased subjectivity tends to mitigate the negativity reflected in the polarity scores, a counterintuitive yet crucial aspect for comprehending nuances in customer feedback.
+These insights are critical for businesses aiming to effectively parse through customer sentiments to enhance service quality or product offerings.
+The differences in model fits and residual patterns also prompt careful consideration of potential data issues like outliers or influential points, which could impact the robustness and interpretation of the models.
 
 \newpage
+
+## 8. Conclusion and Improvements
+[TODO]
+
+\newpage
+
 ## 9. Appendix
 
 ```{r, ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
