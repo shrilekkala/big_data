@@ -173,8 +173,9 @@ For `googleplaystore_user_reviews.csv` there are the following columns:\
 This dataset contains the first 100 'most relevant' review for each app, with some prepocessing already done to add the last 3 features.\
 There are a total of 64295 rows (reviews).
 
-### b) Data Cleaning
+\newpage
 
+### b) Data Cleaning
 ```{r include=FALSE}
 ##########################################
 # 3. b) Data Cleaning
@@ -184,37 +185,32 @@ There are a total of 64295 rows (reviews).
 ```{r include=TRUE, echo=TRUE}
 # Convert the variables to the appropriate data type
 googleplaystore <- googleplaystore_raw |>
-  mutate(
-    # Transform Installs and size to numeric
-    Installs = gsub("\\+", "", as.character(Installs)),
-    Installs = as.numeric(gsub(",", "", Installs)),
-    Size = gsub("M", "", Size),
-    # Convert apps with size < 1MB to 0, and transform to numeric
-    Size = ifelse(grepl("k", Size), 0, as.numeric(Size)),
-    # Transform reviews to numeric
-    Reviews = as.numeric(Reviews),
-    # Change currency numeric
-    Price = as.numeric(gsub("\\$", "", as.character(Price))),
-    # Convert Last.Updated to date
-    Last.Updated = mdy(Last.Updated),
-    # Change version number to 1 decimal, and add NAs where appropriate
-    Android.Ver = gsub("Varies with device", NaN, Android.Ver),
-    Android.Ver = as.numeric(substr(Android.Ver, start = 1, stop = 3)),
-    Current.Ver = gsub("Varies with device", NaN, Current.Ver),
-    Current.Ver = as.numeric(substr(Current.Ver, start = 1, stop = 3)),
-  ) |>
+  mutate(# Transform Installs and size to numeric
+        Installs = gsub("\\+", "", as.character(Installs)),
+        Installs = as.numeric(gsub(",", "", Installs)),
+        Size = gsub("M", "", Size),
+        # Convert apps with size < 1MB to 0, and transform to numeric
+        Size = ifelse(grepl("k", Size), 0, as.numeric(Size)),
+        # Transform reviews to numeric
+        Reviews = as.numeric(Reviews),
+        # Change currency numeric
+        Price = as.numeric(gsub("\\$", "", as.character(Price))),
+        # Convert Last.Updated to date
+        Last.Updated = mdy(Last.Updated),
+        # Change version number to 1 decimal, and add NAs where appropriate
+        Android.Ver = gsub("Varies with device", NaN, Android.Ver),
+        Android.Ver = as.numeric(substr(Android.Ver, start = 1, stop = 3)),
+        Current.Ver = gsub("Varies with device", NaN, Current.Ver),
+        Current.Ver = as.numeric(substr(Current.Ver, start = 1, stop = 3)),) |>
   # Remove apps with Type 0 or NA
   filter(Type %in% c("Free", "Paid")) |>
   # Convert Category, Type, Content.Rating and Genres to factors
-  mutate(
-    App = as.factor(App),
-    Category = as.factor(Category),
-    Type = as.factor(Type),
-    Content.Rating = as.factor(Content.Rating),
-    Genres = as.factor(Genres)
-  ) |>
-  # Remove duplicate rows
-  distinct()
+  mutate(App = as.factor(App),
+         Category = as.factor(Category),
+         Type = as.factor(Type),
+         Content.Rating = as.factor(Content.Rating),
+         Genres = as.factor(Genres)) |>
+  distinct() # Remove duplicate rows
 ```
 
 For the `googleplaystore` dataset, we first process the variables by converting columns to the appropriate datatype.
@@ -432,7 +428,7 @@ This model also lowers the barrier to entry to users.
 The content rating distribution shows that the the significant majority of apps are aimed at is "Everyone".
 This indicates that most apps are designed to be accessible for a general audience, which makes sense if developers want the largest possible user base for their app.
 
-```{r echo=FALSE, fig.align='center'}
+```{r echo=FALSE, fig.align='center', fig.height=3}
 # Count the number of apps in each category
 category_counts <- googleplaystore |>
   count(Category) |>
@@ -619,7 +615,7 @@ This could indicate specific apps in these categories that are significantly les
 In the "googleplaystore_user_reviews" dataset, there are already pre-processed features indicating the Sentiment of the review, its polarity, and its subjectivity.
 Below we visualize the distributions of these features:
 
-```{r echo=FALSE, fig.align='center', fig.height = 4, fig.width=4}
+```{r echo=FALSE, fig.align='center', fig.height = 3, fig.width = 5}
 ##########################################
 # 4. e) Sentiment dataset
 ##########################################
@@ -760,7 +756,7 @@ Despite not explaining more than half of the variance, the model could still be 
 
 Next, we tried a decision tree model to predict log installs, setting the initial minimum node size to 1 and a minimum deviance requirement of 0.00001 to proceed with a new split.
 
-```{r, fig.width=10, fig.align='center', fig.height=5}
+```{r, fig.align='center'}
 ##########################################
 # 5. B. ii) Decision Tree
 ##########################################
@@ -775,8 +771,7 @@ x <- clean_column_names(as.data.frame(x))
 
 set.seed(1234)
 tree_model <- tree(y ~ ., data = x, mincut = 1, mindev = 0.00001)
-plot(tree_model)
-text(tree_model, pretty = 0)
+plot(tree_model, type="uniform")
 ```
 
 
@@ -1830,13 +1825,13 @@ The differences in model fits and residual patterns also prompt careful consider
 ## 8. Conclusion and Improvements
 In this comprehensive analysis of the Google Play Store dataset, we have explored the multifaceted relationships between app characteristics, user sentiment, and market performance. Our findings illuminate the profound impact of user reviews and app updates on app success metrics such as install counts and ratings. Through rigorous statistical modeling, including techniques like LASSO, Decision Trees, and Random Forest, we've identified key predictors of app success and provided a nuanced understanding of the factors that enhance user engagement and satisfaction.
 
-** Key Findings: **
+**Key Findings:**
 
 - **User Reviews:** The volume and sentiment of user reviews are strongly correlated with app visibility and popularity, underscoring the importance of maintaining high user satisfaction.
 - **App Updates:** Frequent updates, which often reflect active development and responsiveness to user feedback, are associated with higher user ratings, suggesting that timely content renewal is critical.
 - **Sentiment Analysis:** Positive sentiment in user reviews generally leads to higher ratings, highlighting the need for apps to elicit and sustain positive user experiences.
 
-** Recommendations for Improvement: **
+**Recommendations for Improvement:**
 
 1. **Deepening Feature Analysis:** To refine the predictive accuracy of our models, further development of feature engineering techniques is recommended. Integrating more detailed user interaction metrics and app performance indicators could uncover deeper insights.
 2. **Model Enhancement:** Continued optimization of the existing models, especially through advanced hyperparameter tuning and the exploration of ensemble methods, could improve their predictive strength and reliability.
